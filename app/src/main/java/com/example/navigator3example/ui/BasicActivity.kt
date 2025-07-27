@@ -2,115 +2,277 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.serialization.Serializable
 
 
-import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.entry
-import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.rememberNavBackStack
-import androidx.navigation3.runtime.rememberSavedStateNavEntryDecorator
-import androidx.navigation3.ui.NavDisplay
-
-
-@kotlinx.serialization.Serializable
-sealed interface ScreenKey : NavKey {
-    @kotlinx.serialization.Serializable
-    object Home : ScreenKey
-    @kotlinx.serialization.Serializable
-    object Middle : ScreenKey
-    @Serializable
-    object Detail : ScreenKey
-}
-
-
+// Tab data class for Material 3 tabs
+data class TabItem(
+    val title: String,
+    val icon: ImageVector,
+    val screen: @Composable () -> Unit
+)
 
 @Composable
 fun AppNavigator() {
-    val backStack = rememberNavBackStack(ScreenKey.Home)
-    val navTo: (ScreenKey) -> Unit = { backStack.add(it) }
-    val goBack: () -> Unit = { if (backStack.size > 1) backStack.removeLastOrNull() }
-    val jumpBackTwo: () -> Unit = { repeat(2) { goBack() } }
-
-    NavDisplay(
-        backStack = backStack,
-        onBack = { steps -> repeat(steps) { goBack() } },
-        entryDecorators = listOf(
-            rememberSavedStateNavEntryDecorator(),  // 📌 State saver
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    
+    // Define the tabs
+    val tabs = listOf(
+        TabItem(
+            title = "Home",
+            icon = Icons.Default.Home,
+            screen = { HomeScreen() }
         ),
-        transitionSpec = {
-            (slideInHorizontally(
-                initialOffsetX = { fullWidth -> fullWidth },
-                animationSpec = tween(300)
-            ) + fadeIn()) togetherWith
-                    (slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> -fullWidth },
-                        animationSpec = tween(300)
-                    ) + fadeOut())
-        },
-        popTransitionSpec = {
-            (slideInHorizontally(
-                initialOffsetX = { fullWidth -> -fullWidth },
-                animationSpec = tween(300)
-            ) + fadeIn()) togetherWith
-                    (slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> fullWidth },
-                        animationSpec = tween(300)
-                    ) + fadeOut())
-        },
-        entryProvider = entryProvider {
-            entry<ScreenKey.Home> { HomeScreen(onNext = { navTo(ScreenKey.Middle) }) }
-            entry<ScreenKey.Middle> { MiddleScreen(onNext = { navTo(ScreenKey.Detail) }) }
-            entry<ScreenKey.Detail> { DetailScreen(onJumpBack = jumpBackTwo) }
-        }
+        TabItem(
+            title = "Middle",
+            icon = Icons.Default.Info,
+            screen = { MiddleScreen() }
+        ),
+        TabItem(
+            title = "Detail",
+            icon = Icons.Default.Settings,
+            screen = { DetailScreen() }
+        )
     )
-}
-
-@Composable
-fun HomeScreen(onNext: () -> Unit) {
-    val textState = rememberSaveable { mutableStateOf("") } // doğru kullanım
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
+    
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Content area with animated transitions
+        AnimatedContent(
+            targetState = selectedTabIndex,
+            transitionSpec = {
+                slideInHorizontally(
+                    initialOffsetX = { fullWidth -> 
+                        if (targetState > initialState) fullWidth else -fullWidth 
+                    },
+                    animationSpec = tween(300)
+                ) + fadeIn() togetherWith slideOutHorizontally(
+                    targetOffsetX = { fullWidth -> 
+                        if (targetState > initialState) -fullWidth else fullWidth 
+                    },
+                    animationSpec = tween(300)
+                ) + fadeOut()
+            },
+            modifier = Modifier.weight(1f),
+            label = "tab_content"
+        ) { tabIndex ->
+            tabs[tabIndex].screen()
+        }
+        
+        // Material 3 TabRow with animated outline - positioned at bottom
+        TabRow(
+            selectedTabIndex = selectedTabIndex,
             modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(8.dp)
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            indicator = { tabPositions ->
+                if (selectedTabIndex < tabPositions.size) {
+                    val currentTabPosition = tabPositions[selectedTabIndex]
+                    val animatedWidth by animateDpAsState(
+                        targetValue = currentTabPosition.width,
+                        animationSpec = tween(durationMillis = 300),
+                        label = "tab_width"
+                    )
+                    val animatedOffset by animateDpAsState(
+                        targetValue = currentTabPosition.left,
+                        animationSpec = tween(durationMillis = 300),
+                        label = "tab_offset"
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .wrapContentSize(Alignment.BottomStart)
+                            .offset(x = animatedOffset)
+                            .width(animatedWidth)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .background(
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                    )
+                }
+            }
         ) {
-            Column(
-                Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text("🏠 Home", style = MaterialTheme.typography.headlineLarge)
-                OutlinedTextField(
-                    value = textState.value,
-                    onValueChange = { textState.value = it },
-                    label = { Text("State Protected Input") },
-                    modifier = Modifier.fillMaxWidth()
+            tabs.forEachIndexed { index, tab ->
+                Tab(
+                    selected = selectedTabIndex == index,
+                    onClick = { selectedTabIndex = index },
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    text = {
+                        Text(
+                            text = tab.title,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    },
+                    icon = {
+                        Icon(
+                            imageVector = tab.icon,
+                            contentDescription = tab.title
+                        )
+                    },
+                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
-                Button(
-                    onClick = onNext,
-                    modifier = Modifier.align(Alignment.End)
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeScreen() {
+    val textState = rememberSaveable { mutableStateOf("") }
+    
+    // Sample data for home screen cards
+    val homeItems = remember {
+        (1..20).map { index ->
+            "Home Item $index" to "This is the description for home item $index"
+        }
+    }
+    
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Header card with input and navigation
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(8.dp)
+            ) {
+                Column(
+                    Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Icon(Icons.Default.ArrowForward, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Go to Middle")
+                    Text("🏠 Home", style = MaterialTheme.typography.headlineLarge)
+                    OutlinedTextField(
+                        value = textState.value,
+                        onValueChange = { textState.value = it },
+                        label = { Text("State Protected Input") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+        
+        // List of home items
+        items(homeItems.size) { index ->
+            val (title, description) = homeItems[index]
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(4.dp)
+            ) {
+                Column(
+                    Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun PreviewHomeScreen() {
+    HomeScreen()
+}
+
+
+@Composable
+fun MiddleScreen() {
+    // Sample data for middle screen cards
+    val middleItems = remember {
+        (1..15).map { index ->
+            "Middle Item $index" to "Content for middle screen item $index with more detailed information"
+        }
+    }
+    
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Header card with navigation
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(8.dp)
+            ) {
+                Column(
+                    Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("📍 Middle", style = MaterialTheme.typography.headlineLarge)
+                }
+            }
+        }
+        
+        // List of middle items
+        items(middleItems.size) { index ->
+            val (title, description) = middleItems[index]
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(4.dp)
+            ) {
+                Column(
+                    Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
         }
@@ -119,64 +281,58 @@ fun HomeScreen(onNext: () -> Unit) {
 
 
 @Composable
-fun MiddleScreen(onNext: () -> Unit) {
-    Box(
+fun DetailScreen() {
+    // Sample data for detail screen cards
+    val detailItems = remember {
+        (1..25).map { index ->
+            "Detail Item $index" to "Detailed information for item $index with comprehensive content and additional context"
+        }
+    }
+    
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(8.dp)
-        ) {
-            Column(
-                Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+        // Header card with navigation
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(8.dp)
             ) {
-                Text("📍 Middle", style = MaterialTheme.typography.headlineLarge)
-                Button(
-                    onClick = onNext,
-                    modifier = Modifier.align(Alignment.End)
+                Column(
+                    Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Icon(Icons.Default.ArrowForward, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Go to Detail")
+                    Text("🔎 Detail", style = MaterialTheme.typography.headlineLarge)
                 }
             }
         }
-    }
-}
-
-
-@Composable
-fun DetailScreen(onJumpBack: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(8.dp)
-        ) {
-            Column(
-                Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+        
+        // List of detail items
+        items(detailItems.size) { index ->
+            val (title, description) = detailItems[index]
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(4.dp)
             ) {
-                Text("🔎 Detail", style = MaterialTheme.typography.headlineLarge)
-                Button(
-                    onClick = onJumpBack,
-                    modifier = Modifier.align(Alignment.Start)
+                Column(
+                    Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Go back 2 steps")
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
         }
