@@ -1,6 +1,6 @@
 package com.example.navigator3example
 
-import AppNavigator
+import NavHost
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-           AppNavigator()
+            NavHost()
         }
     }
 }
