@@ -386,104 +386,91 @@ fun StandardCard(analysis: StandardAnalysis) {
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(8.dp)
         ) {
             Text(
-                text = "Serial Number: ${standard.serialNumber}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
                 text = "Date: ${convertMillisToDate(standard.date)}",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
             )
             
             // Density with analysis
             Row(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Density Count: ${standard.densityCount}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
+                    text = "DS: ${standard.densityCount}",
+                    style = MaterialTheme.typography.bodyMedium
                 )
-                if (analysis.densityDifference != null) {
-                    Text(
-                        text = "${String.format("%.1f", analysis.densityDifference)}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = when (analysis.densityPassFail) {
-                            PassFailStatus.PASS -> MaterialTheme.colorScheme.primary
-                            PassFailStatus.FAIL -> MaterialTheme.colorScheme.error
-                            PassFailStatus.INSUFFICIENT_DATA -> MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = when (analysis.densityPassFail) {
-                            PassFailStatus.PASS -> "PASS"
-                            PassFailStatus.FAIL -> "FAIL"
-                            PassFailStatus.INSUFFICIENT_DATA -> "N/A"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = when (analysis.densityPassFail) {
-                            PassFailStatus.PASS -> MaterialTheme.colorScheme.primary
-                            PassFailStatus.FAIL -> MaterialTheme.colorScheme.error
-                            PassFailStatus.INSUFFICIENT_DATA -> MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
+                Row {
+                    if (analysis.densityDifference != null) {
+                        Text(
+                            text = "${String.format("%.1f", analysis.densityDifference)}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = when (analysis.densityPassFail) {
+                                PassFailStatus.PASS -> MaterialTheme.colorScheme.primary
+                                PassFailStatus.FAIL -> MaterialTheme.colorScheme.error
+                                PassFailStatus.INSUFFICIENT_DATA -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = when (analysis.densityPassFail) {
+                                PassFailStatus.PASS -> "PASS"
+                                PassFailStatus.FAIL -> "FAIL"
+                                PassFailStatus.INSUFFICIENT_DATA -> "N/A"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = when (analysis.densityPassFail) {
+                                PassFailStatus.PASS -> MaterialTheme.colorScheme.primary
+                                PassFailStatus.FAIL -> MaterialTheme.colorScheme.error
+                                PassFailStatus.INSUFFICIENT_DATA -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
                 }
             }
             
             // Moisture with analysis
             Row(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Moisture Count: ${standard.moistureCount}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
+                    text = "MS: ${standard.moistureCount}",
+                    style = MaterialTheme.typography.bodyMedium
                 )
-                if (analysis.moistureDifference != null) {
-                    Text(
-                        text = "${String.format("%.1f", analysis.moistureDifference)}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = when (analysis.moisturePassFail) {
-                            PassFailStatus.PASS -> MaterialTheme.colorScheme.primary
-                            PassFailStatus.FAIL -> MaterialTheme.colorScheme.error
-                            PassFailStatus.INSUFFICIENT_DATA -> MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = when (analysis.moisturePassFail) {
-                            PassFailStatus.PASS -> "PASS"
-                            PassFailStatus.FAIL -> "FAIL"
-                            PassFailStatus.INSUFFICIENT_DATA -> "N/A"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = when (analysis.moisturePassFail) {
-                            PassFailStatus.PASS -> MaterialTheme.colorScheme.primary
-                            PassFailStatus.FAIL -> MaterialTheme.colorScheme.error
-                            PassFailStatus.INSUFFICIENT_DATA -> MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
+                Row {
+                    if (analysis.moistureDifference != null) {
+                        Text(
+                            text = "${String.format("%.1f", analysis.moistureDifference)}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = when (analysis.moisturePassFail) {
+                                PassFailStatus.PASS -> MaterialTheme.colorScheme.primary
+                                PassFailStatus.FAIL -> MaterialTheme.colorScheme.error
+                                PassFailStatus.INSUFFICIENT_DATA -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = when (analysis.moisturePassFail) {
+                                PassFailStatus.PASS -> "PASS"
+                                PassFailStatus.FAIL -> "FAIL"
+                                PassFailStatus.INSUFFICIENT_DATA -> "N/A"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = when (analysis.moisturePassFail) {
+                                PassFailStatus.PASS -> MaterialTheme.colorScheme.primary
+                                PassFailStatus.FAIL -> MaterialTheme.colorScheme.error
+                                PassFailStatus.INSUFFICIENT_DATA -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Based on ${analysis.previousStandardsCount} previous standards",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "Saved: ${convertMillisToDate(standard.timestamp)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
