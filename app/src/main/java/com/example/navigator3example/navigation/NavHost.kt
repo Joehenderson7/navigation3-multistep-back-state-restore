@@ -24,7 +24,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.navigator3example.navigation.TopBar
+import com.example.navigator3example.navigation.StandardsScreen
+import com.example.navigator3example.navigation.Standard
 import kotlinx.serialization.Serializable
+import com.example.navigator3example.ui.theme.topAppBarColors
 
 
 // Tab data class for Material 3 tabs
@@ -37,6 +41,7 @@ data class TabItem(
 @Composable
 fun NavHost() {
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    var title by rememberSaveable { mutableStateOf("Densities") }
 
     // Define the tabs
     val tabs = listOf(
@@ -51,13 +56,14 @@ fun NavHost() {
             screen = { RiceTests() }
         ),
         TabItem(
-            title = "Detail",
+            title = "Standards",
             icon = Icons.Default.Settings,
-            screen = { Instruments() }
+            screen = { StandardsScreen(Standard(null, 0, 0)) }
         )
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
+        TopBar(title)
         // Content area with animated transitions
         AnimatedContent(
             targetState = selectedTabIndex,
@@ -255,66 +261,6 @@ fun RiceTests() {
         // List of Rice Tests
         items(middleItems.size) { index ->
             val (title, description) = middleItems[index]
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
-                Column(
-                    Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-    }
-}
-
-
-@Composable
-fun Instruments() {
-    // Sample data for detail screen cards
-    val detailItems = remember {
-        (1..25).map { index ->
-            "Detail Item $index" to "Detailed information for item $index with comprehensive content and additional context"
-        }
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Header card with navigation
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(
-                    Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text("🔎 Detail", style = MaterialTheme.typography.headlineLarge)
-                }
-            }
-        }
-
-        // List of detail items
-        items(detailItems.size) { index ->
-            val (title, description) = detailItems[index]
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp)
