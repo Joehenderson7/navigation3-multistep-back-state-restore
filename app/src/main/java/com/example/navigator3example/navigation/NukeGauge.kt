@@ -53,6 +53,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.Add
 import com.example.navigator3example.data.StandardDatabase
 import com.example.navigator3example.data.StandardRepository
 import com.example.navigator3example.data.StandardEntity
@@ -162,6 +166,7 @@ fun StandardsScreen(standard: Standard){
     val savedStandards by repository.getAllStandards().collectAsState(initial = emptyList())
     var showAllStandards by remember { mutableStateOf(false) }
     var standardAnalyses by remember { mutableStateOf<List<StandardAnalysis>>(emptyList()) }
+    var showFabMenu by remember { mutableStateOf(false) }
     
     // Analyze standards when data changes
     LaunchedEffect(savedStandards) {
@@ -174,205 +179,222 @@ fun StandardsScreen(standard: Standard){
         convertMillisToDate(it)
     } ?: ""
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-        // Date Input Field
-        Box(
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
-            OutlinedTextField(
-                value = selectedDate,
-                onValueChange = { },
-                label = { Text("Date") },
-                readOnly = true,
-                trailingIcon = {
-                    IconButton(onClick = { showDatePicker = !showDatePicker }) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = "Select date"
-                        )
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-            )
+            // Date Input Field
+            Box(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedDate,
+                    onValueChange = { },
+                    label = { Text("Date") },
+                    readOnly = true,
+                    trailingIcon = {
+                        IconButton(onClick = { showDatePicker = !showDatePicker }) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Select date"
+                            )
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                )
 
-            if (showDatePicker) {
-                Popup(
-                    onDismissRequest = { showDatePicker = false },
-                    alignment = Alignment.TopStart
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .offset(y = 64.dp)
-                            .shadow(elevation = 4.dp)
-                            .background(MaterialTheme.colorScheme.surface)
-                            .padding(16.dp)
+                if (showDatePicker) {
+                    Popup(
+                        onDismissRequest = { showDatePicker = false },
+                        alignment = Alignment.TopStart
                     ) {
-                        DatePicker(
-                            state = datePickerState,
-                            showModeToggle = false
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .offset(y = 64.dp)
+                                .shadow(elevation = 4.dp)
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(16.dp)
+                        ) {
+                            DatePicker(
+                                state = datePickerState,
+                                showModeToggle = false
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        OutlinedTextField(
-            value = gaugeSerialNumber,
-            onValueChange = { newValue ->
-                if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-                    gaugeSerialNumber = newValue
-                }
-            },
-            label = { Text("Gauge Serial Number") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Density Count Input Field
             OutlinedTextField(
-                value = densityCount,
+                value = gaugeSerialNumber,
                 onValueChange = { newValue ->
-                    // Only allow numeric input
                     if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-                        densityCount = newValue
+                        gaugeSerialNumber = newValue
                     }
                 },
-                label = { Text("Density Count") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(.47f)
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Moisture Count Input Field
-            OutlinedTextField(
-                value = moistureCount,
-                onValueChange = { newValue ->
-                    // Only allow numeric input
-                    if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-                        moistureCount = newValue
-                    }
-                },
-                label = { Text("Moisture Count") },
+                label = { Text("Gauge Serial Number") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Save Button
-        Button(
-            onClick = {
-                val selectedDateMillis = datePickerState.selectedDateMillis
-                if (selectedDateMillis != null && 
-                    gaugeSerialNumber.isNotEmpty() && 
-                    densityCount.isNotEmpty() && 
-                    moistureCount.isNotEmpty()) {
-                    
-                    coroutineScope.launch {
-                        try {
-                            repository.insertStandard(
-                                serialNumber = gaugeSerialNumber,
-                                date = selectedDateMillis,
-                                densityCount = densityCount.toInt(),
-                                moistureCount = moistureCount.toInt()
-                            )
-                            saveMessage = "Standard saved successfully!"
-                            // Clear fields after saving
-                            gaugeSerialNumber = ""
-                            densityCount = ""
-                            moistureCount = ""
-                        } catch (e: Exception) {
-                            saveMessage = "Error saving standard: ${e.message}"
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Density Count Input Field
+                OutlinedTextField(
+                    value = densityCount,
+                    onValueChange = { newValue ->
+                        // Only allow numeric input
+                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                            densityCount = newValue
+                        }
+                    },
+                    label = { Text("Density Count") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(.47f)
+                )
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Moisture Count Input Field
+                OutlinedTextField(
+                    value = moistureCount,
+                    onValueChange = { newValue ->
+                        // Only allow numeric input
+                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                            moistureCount = newValue
+                        }
+                    },
+                    label = { Text("Moisture Count") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Save Button
+            Button(
+                onClick = {
+                    val selectedDateMillis = datePickerState.selectedDateMillis
+                    if (selectedDateMillis != null && 
+                        gaugeSerialNumber.isNotEmpty() && 
+                        densityCount.isNotEmpty() && 
+                        moistureCount.isNotEmpty()) {
+                        
+                        coroutineScope.launch {
+                            try {
+                                repository.insertStandard(
+                                    serialNumber = gaugeSerialNumber,
+                                    date = selectedDateMillis,
+                                    densityCount = densityCount.toInt(),
+                                    moistureCount = moistureCount.toInt()
+                                )
+                                saveMessage = "Standard saved successfully!"
+                                // Clear fields after saving
+                                gaugeSerialNumber = ""
+                                densityCount = ""
+                                moistureCount = ""
+                            } catch (e: Exception) {
+                                saveMessage = "Error saving standard: ${e.message}"
+                            }
+                        }
+                    } else {
+                        saveMessage = "Please fill all fields"
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Save Standard")
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Save message
+            if (saveMessage.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = saveMessage,
+                    color = if (saveMessage.contains("Error") || saveMessage.contains("Please fill")) 
+                        MaterialTheme.colorScheme.error 
+                    else 
+                        MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            // Display saved standards
+            if (standardAnalyses.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                val displayedAnalyses = if (showAllStandards) {
+                    standardAnalyses
+                } else {
+                    standardAnalyses.take(4)
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Standards (${displayedAnalyses.size}/${standardAnalyses.size})",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (standardAnalyses.size > 4) {
+                        Button(
+                            onClick = { showAllStandards = !showAllStandards }
+                        ) {
+                            Text(if (showAllStandards) "Show Less" else "Show All")
                         }
                     }
-                } else {
-                    saveMessage = "Please fill all fields"
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Save Standard")
-        }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        // Generate Test Data Button
-        Button(
-            onClick = {
-                coroutineScope.launch {
-                    try {
-                        repository.generateTestData()
-                        saveMessage = "Test data generated successfully! (15 standards)"
-                    } catch (e: Exception) {
-                        saveMessage = "Error generating test data: ${e.message}"
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                LazyColumn {
+                    items(displayedAnalyses) { analysis ->
+                        StandardCard(analysis = analysis)
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Generate Test Data")
-        }
-        
-        // Save message
-        if (saveMessage.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = saveMessage,
-                color = if (saveMessage.contains("Error") || saveMessage.contains("Please fill")) 
-                    MaterialTheme.colorScheme.error 
-                else 
-                    MaterialTheme.colorScheme.primary
-            )
-        }
-        
-        // Display saved standards
-        if (standardAnalyses.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            val displayedAnalyses = if (showAllStandards) {
-                standardAnalyses
-            } else {
-                standardAnalyses.take(4)
             }
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+        }
+        
+        // Floating Action Button with docked popup menu
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            FloatingActionButton(
+                onClick = { showFabMenu = !showFabMenu }
             ) {
-                Text(
-                    text = "Standards (${displayedAnalyses.size}/${standardAnalyses.size})",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Menu"
                 )
-                if (standardAnalyses.size > 4) {
-                    Button(
-                        onClick = { showAllStandards = !showAllStandards }
-                    ) {
-                        Text(if (showAllStandards) "Show Less" else "Show All")
-                    }
-                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
             
-            LazyColumn {
-                items(displayedAnalyses) { analysis ->
-                    StandardCard(analysis = analysis)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+            // Dropdown menu docked to FAB
+            DropdownMenu(
+                expanded = showFabMenu,
+                onDismissRequest = { showFabMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Generate Test Data") },
+                    onClick = {
+                        showFabMenu = false
+                        // TODO: Implement generate test data functionality
+                    }
+                )
             }
         }
     }
