@@ -46,14 +46,14 @@ fun NavHost() {
     // Define the tabs
     val tabs = listOf(
         TabItem(
-            title = "Home",
+            title = "Rice",
             icon = Icons.Default.Home,
-            screen = { DensityTests() }
+            screen = { RiceTests() }
         ),
         TabItem(
             title = "Middle",
             icon = Icons.Default.Info,
-            screen = { RiceTests() }
+            screen = { DensityTests() }
         ),
         TabItem(
             title = "Standards",
@@ -156,10 +156,10 @@ fun NavHost() {
 fun DensityTests() {
     val textState = rememberSaveable { mutableStateOf("") }
 
-    // Sample data for home screen cards
-    val homeItems = remember {
+    // Sample data for density screen cards
+    val densityItems = remember {
         (1..20).map { index ->
-            "Home Item $index" to "This is the description for home item $index"
+            "Density Item $index" to "This is the description for density item $index"
         }
     }
 
@@ -181,7 +181,7 @@ fun DensityTests() {
                         .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text("🏠 Home", style = MaterialTheme.typography.headlineLarge)
+                    Text("🏠 Density", style = MaterialTheme.typography.headlineLarge)
                     OutlinedTextField(
                         value = textState.value,
                         onValueChange = { textState.value = it },
@@ -192,9 +192,9 @@ fun DensityTests() {
             }
         }
 
-        // List of home items
-        items(homeItems.size) { index ->
-            val (title, description) = homeItems[index]
+        // List of density items
+        items(densityItems.size) { index ->
+            val (title, description) = densityItems[index]
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp)
@@ -221,64 +221,192 @@ fun DensityTests() {
 
 @Preview
 @Composable
-fun PreviewHomeScreen1() {
+fun PreviewDensityScreen() {
     DensityTests()
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RiceTests() {
-    // Sample data for middle screen cards
-    val middleItems = remember {
-        (1..15).map { index ->
-            "Middle Item $index" to "Content for middle screen item $index with more detailed information"
+    // State for HMA rice test input
+    var selectedCalibrate by rememberSaveable { mutableStateOf("") }
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    var testDate by rememberSaveable { mutableStateOf("") }
+    var dryWeightA by rememberSaveable { mutableStateOf("") }
+    var dryWeightB by rememberSaveable { mutableStateOf("") }
+    var wetWeightA by rememberSaveable { mutableStateOf("") }
+    var wetWeightB by rememberSaveable { mutableStateOf("") }
+    
+    // Calibrate options for dropdown
+    val calibrateOptions = listOf("Calibrate 1", "Calibrate 2", "Calibrate 3", "Calibrate 4", "Calibrate 5")
+    
+    // Sample data for previous rice tests
+    val previousTests = remember {
+        (1..10).map { index ->
+            "Rice Test #$index" to "Moisture: ${12 + index}%, Temp: ${20 + index}°C, Duration: ${30 + index}min"
         }
     }
 
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(16.dp)
     ) {
-        // Header card with navigation
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(8.dp)
+        // Top Panel - HMA Rice Test Input
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(0.6f),
+            elevation = CardDefaults.cardElevation(8.dp)
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text("📍 Rice", style = MaterialTheme.typography.headlineLarge)
+                item {
+                    Text(
+                        "🌾 HMA Rice Test",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                }
+                
+                item {
+                    // Calibrate Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = selectedCalibrate,
+                            onValueChange = { },
+                            readOnly = true,
+                            label = { Text("Select Calibrate") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            calibrateOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        selectedCalibrate = option
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                item {
+                    OutlinedTextField(
+                        value = testDate,
+                        onValueChange = { testDate = it },
+                        label = { Text("Date") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    OutlinedTextField(
+                        value = dryWeightA,
+                        onValueChange = { dryWeightA = it },
+                        label = { Text("Dry Weight A (g)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    OutlinedTextField(
+                        value = dryWeightB,
+                        onValueChange = { dryWeightB = it },
+                        label = { Text("Dry Weight B (g)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    OutlinedTextField(
+                        value = wetWeightA,
+                        onValueChange = { wetWeightA = it },
+                        label = { Text("Wet Weight A (g)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    OutlinedTextField(
+                        value = wetWeightB,
+                        onValueChange = { wetWeightB = it },
+                        label = { Text("Wet Weight B (g)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    Button(
+                        onClick = { /* TODO: Save test */ },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Save Rice Test")
+                    }
                 }
             }
         }
-
-        // List of Rice Tests
-        items(middleItems.size) { index ->
-            val (title, description) = middleItems[index]
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(4.dp)
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Bottom Panel - Previous Rice Tests (Scrollable)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(0.4f),
+            elevation = CardDefaults.cardElevation(8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
             ) {
-                Column(
-                    Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
+                Text(
+                    "Previous Rice Tests",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                
+                LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    items(previousTests.size) { index ->
+                        val (title, description) = previousTests[index]
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(2.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(12.dp)
+                                    .fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
