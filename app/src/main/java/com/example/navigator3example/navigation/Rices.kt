@@ -142,33 +142,43 @@ fun RiceTests() {
                             .clickable { showDatePicker = true }
                     )
                     
-                    // Date Picker Dialog
+                    // Docked Date Picker
                     if (showDatePicker) {
                         val datePickerState = rememberDatePickerState()
-                        DatePickerDialog(
-                            onDismissRequest = { showDatePicker = false },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        datePickerState.selectedDateMillis?.let { millis ->
-                                            val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                                            testDate = formatter.format(Date(millis))
-                                        }
-                                        showDatePicker = false
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                DatePicker(
+                                    state = datePickerState,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    TextButton(
+                                        onClick = { showDatePicker = false }
+                                    ) {
+                                        Text("Cancel")
                                     }
-                                ) {
-                                    Text("OK")
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(
-                                    onClick = { showDatePicker = false }
-                                ) {
-                                    Text("Cancel")
+                                    TextButton(
+                                        onClick = {
+                                            datePickerState.selectedDateMillis?.let { millis ->
+                                                val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                                testDate = formatter.format(Date(millis))
+                                            }
+                                            showDatePicker = false
+                                        }
+                                    ) {
+                                        Text("OK")
+                                    }
                                 }
                             }
-                        ) {
-                            DatePicker(state = datePickerState)
                         }
                     }
                 }
