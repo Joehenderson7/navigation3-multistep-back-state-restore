@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.navigator3example.navigation.RiceTests
 import com.example.navigator3example.navigation.TopBar
 import com.example.navigator3example.navigation.StandardsScreen
 import com.example.navigator3example.navigation.Standard
@@ -46,14 +47,14 @@ fun NavHost() {
     // Define the tabs
     val tabs = listOf(
         TabItem(
-            title = "Home",
+            title = "Rice",
             icon = Icons.Default.Home,
-            screen = { DensityTests() }
+            screen = { RiceTests() }
         ),
         TabItem(
             title = "Middle",
             icon = Icons.Default.Info,
-            screen = { RiceTests() }
+            screen = { DensityTests() }
         ),
         TabItem(
             title = "Standards",
@@ -156,10 +157,10 @@ fun NavHost() {
 fun DensityTests() {
     val textState = rememberSaveable { mutableStateOf("") }
 
-    // Sample data for home screen cards
-    val homeItems = remember {
+    // Sample data for density screen cards
+    val densityItems = remember {
         (1..20).map { index ->
-            "Home Item $index" to "This is the description for home item $index"
+            "Density Item $index" to "This is the description for density item $index"
         }
     }
 
@@ -181,7 +182,7 @@ fun DensityTests() {
                         .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text("🏠 Home", style = MaterialTheme.typography.headlineLarge)
+                    Text("🏠 Density", style = MaterialTheme.typography.headlineLarge)
                     OutlinedTextField(
                         value = textState.value,
                         onValueChange = { textState.value = it },
@@ -192,9 +193,9 @@ fun DensityTests() {
             }
         }
 
-        // List of home items
-        items(homeItems.size) { index ->
-            val (title, description) = homeItems[index]
+        // List of density items
+        items(densityItems.size) { index ->
+            val (title, description) = densityItems[index]
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(4.dp)
@@ -221,9 +222,8 @@ fun DensityTests() {
 
 @Preview
 @Composable
-fun PreviewHomeScreen1() {
+fun PreviewDensityScreen() {
     DensityTests()
 }
-
 
 
