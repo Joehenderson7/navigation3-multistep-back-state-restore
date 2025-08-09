@@ -1,4 +1,4 @@
-package com.example.navigator3example.navigation.rice
+package com.example.navigator3example.navigation.standards
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -34,8 +34,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.example.navigator3example.data.rice.RiceDatabase
-import com.example.navigator3example.data.rice.RiceRepository
 import com.example.navigator3example.ui.components.MaterialDateTimePicker
 import com.example.navigator3example.ui.components.convertMillisToDate
 import androidx.compose.runtime.collectAsState
@@ -43,23 +41,21 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.example.navigator3example.data.nuke.NukeGaugeDatabase
+import com.example.navigator3example.data.nuke.NukeGaugeRepository
 
 @Composable
-fun NewRiceCalibrationScreen() {
+fun NukeGaugeScreen() {
     val context = LocalContext.current
-    // Build repository from Room database
-    val db = remember { RiceDatabase.getDatabase(context) }
-    val repo = remember { RiceRepository(db.riceDao()) }
+    val db = remember { NukeGaugeDatabase.getDatabase(context) }
+    val repo = remember { NukeGaugeRepository(db.nukeGaugeDao()) }
     val scope = rememberCoroutineScope()
 
-    // Input states
     var dateMillis by rememberSaveable { mutableStateOf<Long?>(System.currentTimeMillis()) }
     var dateText by rememberSaveable { mutableStateOf(convertMillisToDate(dateMillis!!)) }
-    var weightA by rememberSaveable { mutableStateOf("") }
-    var weightB by rememberSaveable { mutableStateOf("") }
+    var serialNumber by rememberSaveable { mutableStateOf("") }
     var isSaving by rememberSaveable { mutableStateOf(false) }
 
-    // Load previous calibrations
     val calibrationsFlow = remember { repo.getAllCalibrations() }
     val calibrations by calibrationsFlow.collectAsState(initial = emptyList())
 
@@ -68,7 +64,6 @@ fun NewRiceCalibrationScreen() {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Top input card (scrollable content)
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -82,61 +77,50 @@ fun NewRiceCalibrationScreen() {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "New Rice Calibration",
+                    text = "New Nuke Gauge",
                     style = MaterialTheme.typography.titleMedium
                 )
 
-                // Date picker using shared component
                 MaterialDateTimePicker(
                     value = dateText,
                     onDateSelected = { selected ->
                         dateText = selected
-                        // Parse back to millis for storage
                         runCatching {
                             val sdf = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
                             dateMillis = sdf.parse(selected)?.time
                         }
                     },
-                    label = "Calibration Date",
+                    label = "Date",
                     placeholder = "Select Date"
                 )
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = weightA,
-                        onValueChange = { weightA = it.filter { ch -> ch.isDigit() || ch == '.' } },
-                        label = { Text("Vessel A Weight") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = weightB,
-                        onValueChange = { weightB = it.filter { ch -> ch.isDigit() || ch == '.' } },
-                        label = { Text("Vessel B Weight") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                OutlinedTextField(
+                    value = serialNumber,
+                    onValueChange = { newValue ->
+                        // Allow digits only to stay consistent with Standards screen for now
+                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                            serialNumber = newValue
+                        }
+                    },
+                    label = { Text("Gauge Serial Number") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Button(
                     onClick = {
-                        val a = weightA.toFloatOrNull()
-                        val b = weightB.toFloatOrNull()
                         val d = dateMillis
-                        if (a == null || b == null || d == null) {
-                            Toast.makeText(context, "Please enter valid weights and date", Toast.LENGTH_SHORT).show()
+                        if (d == null || serialNumber.isBlank()) {
+                            Toast.makeText(context, "Please enter date and serial number", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
                         isSaving = true
-                        // Insert using repository in IO thread
                         scope.launch(Dispatchers.IO) {
-                            runCatching { repo.insertCalibration(a, b, d) }
+                            runCatching { repo.insertGauge(serialNumber, d) }
                                 .onSuccess {
                                     withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, "Calibration saved", Toast.LENGTH_SHORT).show()
-                                        // Reset inputs
-                                        weightA = ""
-                                        weightB = ""
+                                        Toast.makeText(context, "Gauge saved", Toast.LENGTH_SHORT).show()
+                                        serialNumber = ""
                                         isSaving = false
                                     }
                                 }
@@ -151,14 +135,13 @@ fun NewRiceCalibrationScreen() {
                     enabled = !isSaving,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (isSaving) "Saving..." else "Save Calibration")
+                    Text(if (isSaving) "Saving..." else "Save Gauge")
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Bottom list card (scrollable list)
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -166,7 +149,7 @@ fun NewRiceCalibrationScreen() {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Previous Calibrations",
+                    text = "Existing Nuke Gauges",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -175,13 +158,14 @@ fun NewRiceCalibrationScreen() {
                 LazyColumn(modifier = Modifier.fillMaxWidth().height(300.dp)) {
                     items(calibrations) { cal ->
                         val dateStr = convertMillisToDate(cal.date)
-                        Column(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)) {
-                            Text(text = dateStr, style = MaterialTheme.typography.bodyMedium)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        ) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(text = "Vessel A: ${String.format(Locale.getDefault(), "%.3f", cal.weightA)}")
-                                Text(text = "Vessel B: ${String.format(Locale.getDefault(), "%.3f", cal.weightB)}")
+                                Text(text = dateStr, style = MaterialTheme.typography.bodyMedium)
+                                Text(text = "SN: ${cal.serialNumber}")
                             }
                         }
                         Divider()
@@ -194,7 +178,6 @@ fun NewRiceCalibrationScreen() {
 
 @Preview
 @Composable
-fun PreviewNewRiceCalibrationScreen() {
-    NewRiceCalibrationScreen()
+fun PreviewNukeGaugeScreen() {
+    NukeGaugeScreen()
 }
-

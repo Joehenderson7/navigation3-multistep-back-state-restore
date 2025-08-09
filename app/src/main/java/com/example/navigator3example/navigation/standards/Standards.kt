@@ -55,6 +55,10 @@ import com.example.navigator3example.data.standards.StandardRepository
 import com.example.navigator3example.data.standards.StandardEntity
 import com.example.navigator3example.ui.components.MaterialDateTimePicker
 import kotlin.math.abs
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import com.example.navigator3example.data.nuke.NukeGaugeDatabase
+import com.example.navigator3example.data.nuke.NukeGaugeRepository
 
 data class Standard @OptIn(ExperimentalMaterial3Api::class)
 constructor(
@@ -161,6 +165,22 @@ fun StandardsScreen(standard: Standard){
     var showAllStandards by rememberSaveable { mutableStateOf(false) }
     var standardAnalyses by remember { mutableStateOf<List<StandardAnalysis>>(emptyList()) }
     var showFabMenu by rememberSaveable { mutableStateOf(false) }
+    var showNukeGauge by rememberSaveable { mutableStateOf(false) }
+
+    // Inline sub-navigation for Nuke Gauge screen (Dialog fullscreen)
+    androidx.activity.compose.BackHandler(enabled = showNukeGauge) {
+        showNukeGauge = false
+    }
+    if (showNukeGauge) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showNukeGauge = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            androidx.compose.material3.Surface(modifier = Modifier.fillMaxSize()) {
+                NukeGaugeScreen()
+            }
+        }
+    }
     
     // Analyze standards when data changes
     LaunchedEffect(savedStandards) {
@@ -202,15 +222,10 @@ fun StandardsScreen(standard: Standard){
                 modifier = Modifier.fillMaxWidth()
             )
             Row{
-                OutlinedTextField(
-                    value = gaugeSerialNumber,
-                    onValueChange = { newValue ->
-                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-                            gaugeSerialNumber = newValue
-                        }
-                    },
-                    label = { Text("Gauge Serial Number") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                // Gauge dropdown populated from Room NukeGauge database
+                GaugeSerialDropdown(
+                    selected = gaugeSerialNumber,
+                    onSelectedChange = { gaugeSerialNumber = it },
                     modifier = Modifier.fillMaxWidth(.85f)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
@@ -218,7 +233,7 @@ fun StandardsScreen(standard: Standard){
                 Column (modifier = Modifier.align(CenterVertically)){
                     ButtonAddNewNukeGauge (
                         modifier = Modifier.fillMaxWidth(),
-                    ){  }
+                    ){ showNukeGauge = true }
                 }
 
             }
@@ -503,6 +518,53 @@ fun ButtonAddNewNukeGauge(
         )
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GaugeSerialDropdown(
+    selected: String,
+    onSelectedChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val db = remember { NukeGaugeDatabase.getDatabase(context) }
+    val repo = remember { NukeGaugeRepository(db.nukeGaugeDao()) }
+    val serialsFlow = remember { repo.getAllSerialNumbers() }
+    val serials by serialsFlow.collectAsState(initial = emptyList())
+    var expanded by rememberSaveable { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selected,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Gauge Serial Number") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            serials.forEach { sn ->
+                DropdownMenuItem(
+                    text = { Text(sn) },
+                    onClick = {
+                        onSelectedChange(sn)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 @Preview
 @Composable
 fun StandardsScreenPreview() {
