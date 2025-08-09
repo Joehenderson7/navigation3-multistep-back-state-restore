@@ -1,21 +1,12 @@
-package com.example.navigator3example.navigation
+package com.example.navigator3example.navigation.standards
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -27,11 +18,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,6 +35,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Button
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -57,9 +47,14 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material.icons.filled.Add
-import com.example.navigator3example.data.StandardDatabase
-import com.example.navigator3example.data.StandardRepository
-import com.example.navigator3example.data.StandardEntity
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.Alignment.Companion.CenterVertically
+import androidx.compose.ui.text.style.TextAlign
+import com.example.navigator3example.data.standards.StandardDatabase
+import com.example.navigator3example.data.standards.StandardRepository
+import com.example.navigator3example.data.standards.StandardEntity
+import com.example.navigator3example.ui.components.MaterialDateTimePicker
+import kotlin.math.abs
 
 data class Standard @OptIn(ExperimentalMaterial3Api::class)
 constructor(
@@ -97,7 +92,7 @@ object StandardStatistics {
     fun checkDensityPassFail(difference: Double?): PassFailStatus {
         return when {
             difference == null -> PassFailStatus.INSUFFICIENT_DATA
-            kotlin.math.abs(difference) <= 1.0 -> PassFailStatus.PASS
+            abs(difference) <= 1.0 -> PassFailStatus.PASS
             else -> PassFailStatus.FAIL
         }
     }
@@ -105,7 +100,7 @@ object StandardStatistics {
     fun checkMoisturePassFail(difference: Double?): PassFailStatus {
         return when {
             difference == null -> PassFailStatus.INSUFFICIENT_DATA
-            kotlin.math.abs(difference) <= 2.0 -> PassFailStatus.PASS
+            abs(difference) <= 2.0 -> PassFailStatus.PASS
             else -> PassFailStatus.FAIL
         }
     }
@@ -155,18 +150,17 @@ fun StandardsScreen(standard: Standard){
     val repository = StandardRepository(database.standardDao())
     val coroutineScope = rememberCoroutineScope()
     
-    var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = standard.date)
-    var densityCount by remember { mutableStateOf(standard.ds.toString()) }
-    var moistureCount by remember { mutableStateOf(standard.ms.toString()) }
-    var gaugeSerialNumber by remember { mutableStateOf(standard.serialNumber) }
-    var saveMessage by remember { mutableStateOf("") }
+    var densityCount by rememberSaveable { mutableStateOf(standard.ds.toString()) }
+    var moistureCount by rememberSaveable { mutableStateOf(standard.ms.toString()) }
+    var gaugeSerialNumber by rememberSaveable { mutableStateOf(standard.serialNumber) }
+    var saveMessage by rememberSaveable { mutableStateOf("") }
     
     // Observe saved standards from database
     val savedStandards by repository.getAllStandards().collectAsState(initial = emptyList())
-    var showAllStandards by remember { mutableStateOf(false) }
+    var showAllStandards by rememberSaveable { mutableStateOf(false) }
     var standardAnalyses by remember { mutableStateOf<List<StandardAnalysis>>(emptyList()) }
-    var showFabMenu by remember { mutableStateOf(false) }
+    var showFabMenu by rememberSaveable { mutableStateOf(false) }
     
     // Analyze standards when data changes
     LaunchedEffect(savedStandards) {
@@ -187,61 +181,48 @@ fun StandardsScreen(standard: Standard){
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Date Input Field
-            Box(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = selectedDate,
-                    onValueChange = { },
-                    label = { Text("Date") },
-                    readOnly = true,
-                    trailingIcon = {
-                        IconButton(onClick = { showDatePicker = !showDatePicker }) {
-                            Icon(
-                                imageVector = Icons.Default.DateRange,
-                                contentDescription = "Select date"
-                            )
+            // Material Date Time Picker (based on standards logic with theme influence)
+            MaterialDateTimePicker(
+                value = selectedDate,
+                onDateSelected = { newDate ->
+                    // Update the datePickerState when date is selected
+                    val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+                    try {
+                        val date = formatter.parse(newDate)
+                        date?.let {
+                            // The component handles the date selection internally
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                )
-
-                if (showDatePicker) {
-                    Popup(
-                        onDismissRequest = { showDatePicker = false },
-                        alignment = Alignment.TopStart
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .offset(y = 64.dp)
-                                .shadow(elevation = 4.dp)
-                                .background(MaterialTheme.colorScheme.surface)
-                                .padding(16.dp)
-                        ) {
-                            DatePicker(
-                                state = datePickerState,
-                                showModeToggle = false
-                            )
-                        }
-                    }
-                }
-            }
-
-            OutlinedTextField(
-                value = gaugeSerialNumber,
-                onValueChange = { newValue ->
-                    if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-                        gaugeSerialNumber = newValue
+                    } catch (e: Exception) {
+                        // Handle parsing error if needed
                     }
                 },
-                label = { Text("Gauge Serial Number") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                label = "Date",
+                placeholder = "Select Date",
+                initialDateMillis = standard.date,
                 modifier = Modifier.fillMaxWidth()
             )
+            Row{
+                OutlinedTextField(
+                    value = gaugeSerialNumber,
+                    onValueChange = { newValue ->
+                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                            gaugeSerialNumber = newValue
+                        }
+                    },
+                    label = { Text("Gauge Serial Number") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(.85f)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column (modifier = Modifier.align(CenterVertically)){
+                    ButtonAddNewNukeGauge (
+                        modifier = Modifier.fillMaxWidth(),
+                    ){  }
+                }
+
+            }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -496,7 +477,32 @@ fun StandardCard(analysis: StandardAnalysis) {
         }
     }
 }
-
+@Composable
+fun ButtonAddNewNukeGauge(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+){
+    Column (
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Button(
+            onClick = onClick,
+            modifier = modifier.fillMaxWidth(),
+            enabled = true,
+            shape = MaterialTheme.shapes.small,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
+            content = {
+                Text(
+                    text = "+",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        )
+    }
+}
 @Preview
 @Composable
 fun StandardsScreenPreview() {

@@ -1,8 +1,8 @@
 package com.example.navigator3example
 
-import com.example.navigator3example.data.StandardEntity
-import com.example.navigator3example.navigation.Standard
-import com.example.navigator3example.navigation.convertMillisToDate
+import com.example.navigator3example.data.standards.StandardEntity
+import com.example.navigator3example.navigation.standards.Standard
+import com.example.navigator3example.navigation.standards.convertMillisToDate
 import org.junit.Test
 import org.junit.Assert.*
 import java.text.SimpleDateFormat
@@ -27,7 +27,8 @@ class StandardTest {
             date = date,
             densityCount = densityCount,
             moistureCount = moistureCount,
-            timestamp = timestamp
+            timestamp = timestamp,
+            gaugeSN = "TEST_GAUGE"
         )
 
         // Then
@@ -80,9 +81,9 @@ class StandardTest {
         val earlier = now - 1000
         val later = now + 1000
 
-        val standard1 = StandardEntity(1, "12345", now, 100, 50, earlier)
-        val standard2 = StandardEntity(2, "12345", now, 110, 55, now)
-        val standard3 = StandardEntity(3, "12345", now, 120, 60, later)
+        val standard1 = StandardEntity(1, "12345", now, 100, 50, earlier, "GAUGE1")
+        val standard2 = StandardEntity(2, "12345", now, 110, 55, now, "GAUGE1")
+        val standard3 = StandardEntity(3, "12345", now, 120, 60, later, "GAUGE1")
 
         val standards = listOf(standard1, standard2, standard3)
 
@@ -99,9 +100,9 @@ class StandardTest {
     fun `StandardEntity should support grouping by serial number`() {
         // Given
         val now = System.currentTimeMillis()
-        val standard1 = StandardEntity(1, "12345", now, 100, 50, now)
-        val standard2 = StandardEntity(2, "67890", now, 110, 55, now)
-        val standard3 = StandardEntity(3, "12345", now, 120, 60, now)
+        val standard1 = StandardEntity(1, "12345", now, 100, 50, now, "GAUGE1")
+        val standard2 = StandardEntity(2, "67890", now, 110, 55, now, "GAUGE2")
+        val standard3 = StandardEntity(3, "12345", now, 120, 60, now, "GAUGE1")
 
         val standards = listOf(standard1, standard2, standard3)
 

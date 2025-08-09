@@ -1,4 +1,4 @@
-package com.example.navigator3example.data
+package com.example.navigator3example.data.standards
 
 import kotlinx.coroutines.flow.Flow
 import java.util.Calendar
@@ -20,7 +20,8 @@ class StandardRepository(private val standardDao: StandardDao) {
             date = date,
             densityCount = densityCount,
             moistureCount = moistureCount,
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            gaugeSN = "3717"
         )
         standardDao.insertStandard(standard)
     }
@@ -108,7 +109,8 @@ class StandardRepository(private val standardDao: StandardDao) {
                 date = baseTime - (14 - index) * 24 * 60 * 60 * 1000L, // Spread over 15 days
                 densityCount = density,
                 moistureCount = moisture,
-                timestamp = baseTime - (14 - index) * 24 * 60 * 60 * 1000L + timeOffset
+                timestamp = baseTime - (14 - index) * 24 * 60 * 60 * 1000L + timeOffset,
+                gaugeSN = "3717",
             )
             standardDao.insertStandard(standard)
         }

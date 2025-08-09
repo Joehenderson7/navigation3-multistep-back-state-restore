@@ -1,6 +1,3 @@
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -10,26 +7,23 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.navigator3example.navigation.RiceTests
+import com.example.navigator3example.navigation.rice.RiceTests
 import com.example.navigator3example.navigation.TopBar
-import com.example.navigator3example.navigation.StandardsScreen
-import com.example.navigator3example.navigation.Standard
-import kotlinx.serialization.Serializable
-import com.example.navigator3example.ui.theme.topAppBarColors
+import com.example.navigator3example.navigation.standards.StandardsScreen
+import com.example.navigator3example.navigation.standards.Standard
 
 
 // Tab data class for Material 3 tabs
@@ -63,6 +57,9 @@ fun NavHost() {
         )
     )
 
+    // Hold saveable state for each tab so switching tabs preserves inputs
+    val saveableStateHolder = rememberSaveableStateHolder()
+
     Column(modifier = Modifier.fillMaxSize()) {
         TopBar(title)
         // Content area with animated transitions
@@ -84,7 +81,10 @@ fun NavHost() {
             modifier = Modifier.weight(1f),
             label = "tab_content"
         ) { tabIndex ->
-            tabs[tabIndex].screen()
+            // Use a stable key per tab (e.g., title) to preserve its subtree state
+            saveableStateHolder.SaveableStateProvider(key = tabs[tabIndex].title) {
+                tabs[tabIndex].screen()
+            }
         }
 
         // Material 3 TabRow with animated outline - positioned at bottom
