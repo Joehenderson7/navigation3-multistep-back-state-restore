@@ -32,8 +32,6 @@ fun TopBar(
     title: String,
     onNavigationClick: (() -> Unit)? = null
 ) {
-    var menuExpanded by remember { mutableStateOf(false) }
-
     TopAppBar(
         title = {
             Text(
@@ -44,7 +42,7 @@ fun TopBar(
         },
         navigationIcon = {
             IconButton(
-                onClick = { menuExpanded = !menuExpanded }
+                onClick = { onNavigationClick?.invoke() }
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,

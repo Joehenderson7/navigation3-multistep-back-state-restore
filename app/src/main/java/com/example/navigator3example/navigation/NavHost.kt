@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.example.navigator3example.navigation.rice.RiceTests
 import com.example.navigator3example.ui.components.TopBar
 import com.example.navigator3example.navigation.standards.StandardsScreen
@@ -34,7 +35,9 @@ data class TabItem(
 @Composable
 fun NavHost() {
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
-    var title by rememberSaveable { mutableStateOf("Densities") }
+    var showSlidingPanels by rememberSaveable { mutableStateOf(false) }
+    // Title reflects either current tab or current screen
+    var title by rememberSaveable { mutableStateOf("Rice") }
 
     // Theme preference
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -63,97 +66,154 @@ fun NavHost() {
     // Hold saveable state for each tab so switching tabs preserves inputs
     val saveableStateHolder = rememberSaveableStateHolder()
 
+    // Drawer state
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
     com.example.navigator3example.ui.theme.Navigator3ExampleTheme(darkTheme = isDarkTheme) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            TopBar(title)
-            // Content area with animated transitions
-        AnimatedContent(
-            targetState = selectedTabIndex,
-            transitionSpec = {
-                slideInHorizontally(
-                    initialOffsetX = { fullWidth ->
-                        if (targetState > initialState) fullWidth else -fullWidth
-                    },
-                    animationSpec = tween(300)
-                ) + fadeIn() togetherWith slideOutHorizontally(
-                    targetOffsetX = { fullWidth ->
-                        if (targetState > initialState) -fullWidth else fullWidth
-                    },
-                    animationSpec = tween(300)
-                ) + fadeOut()
-            },
-            modifier = Modifier.weight(1f),
-            label = "tab_content"
-        ) { tabIndex ->
-            // Use a stable key per tab (e.g., title) to preserve its subtree state
-            saveableStateHolder.SaveableStateProvider(key = tabs[tabIndex].title) {
-                tabs[tabIndex].screen()
-            }
-        }
-
-        // Material 3 TabRow with animated outline - positioned at bottom
-        TabRow(
-            selectedTabIndex = selectedTabIndex,
-            modifier = Modifier.fillMaxWidth(),
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            indicator = { tabPositions ->
-                if (selectedTabIndex < tabPositions.size) {
-                    val currentTabPosition = tabPositions[selectedTabIndex]
-                    val animatedWidth by animateDpAsState(
-                        targetValue = currentTabPosition.width,
-                        animationSpec = tween(durationMillis = 300),
-                        label = "tab_width"
-                    )
-                    val animatedOffset by animateDpAsState(
-                        targetValue = currentTabPosition.left,
-                        animationSpec = tween(durationMillis = 300),
-                        label = "tab_offset"
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .wrapContentSize(Alignment.BottomStart)
-                            .offset(x = animatedOffset)
-                            .width(animatedWidth)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .border(
-                                width = 2.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .background(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                shape = RoundedCornerShape(8.dp)
-                            )
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet {
+                    NavigationDrawerItem(
+                        label = { Text("Sliding Panels") },
+                        selected = showSlidingPanels,
+                        onClick = {
+                            showSlidingPanels = true
+                            title = "Sliding Panels"
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = {
+                            Icon(imageVector = Icons.Default.Info, contentDescription = "Sliding Panels")
+                        }
                     )
                 }
             }
         ) {
-            tabs.forEachIndexed { index, tab ->
-                Tab(
-                    selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    text = {
-                        Text(
-                            text = tab.title,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = tab.icon,
-                            contentDescription = tab.title
-                        )
-                    },
-                    selectedContentColor = MaterialTheme.colorScheme.primary,
-                    unselectedContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            Column(modifier = Modifier.fillMaxSize()) {
+                TopBar(
+                    title = title,
+                    onNavigationClick = { scope.launch { drawerState.open() } }
                 )
+                if (showSlidingPanels) {
+                    // Show the SlidingPanels screen when selected from the drawer
+                    com.example.navigator3example.ui.components.SlidingPanels(
+                        modifier = Modifier.weight(1f),
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        topContent = {
+                            // Simple placeholder content for the top panel
+                            Text(
+                                text = "Top content",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        },
+                        bottomContent = {
+                            // Simple placeholder content for the bottom panel
+                            Text(
+                                text = "Bottom sliding content",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    )
+                } else {
+                    // Content area with animated transitions between tabs
+                    AnimatedContent(
+                        targetState = selectedTabIndex,
+                        transitionSpec = {
+                            slideInHorizontally(
+                                initialOffsetX = { fullWidth ->
+                                    if (targetState > initialState) fullWidth else -fullWidth
+                                },
+                                animationSpec = tween(300)
+                            ) + fadeIn() togetherWith slideOutHorizontally(
+                                targetOffsetX = { fullWidth ->
+                                    if (targetState > initialState) -fullWidth else fullWidth
+                                },
+                                animationSpec = tween(300)
+                            ) + fadeOut()
+                        },
+                        modifier = Modifier.weight(1f),
+                        label = "tab_content"
+                    ) { tabIndex ->
+                        // Use a stable key per tab (e.g., title) to preserve its subtree state
+                        saveableStateHolder.SaveableStateProvider(key = tabs[tabIndex].title) {
+                            tabs[tabIndex].screen()
+                        }
+                    }
+                }
+
+                // Material 3 TabRow with animated outline - positioned at bottom; hidden on SlidingPanels
+                if (!showSlidingPanels) {
+                    TabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        modifier = Modifier.fillMaxWidth(),
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        indicator = { tabPositions ->
+                            if (selectedTabIndex < tabPositions.size) {
+                                val currentTabPosition = tabPositions[selectedTabIndex]
+                                val animatedWidth by animateDpAsState(
+                                    targetValue = currentTabPosition.width,
+                                    animationSpec = tween(durationMillis = 300),
+                                    label = "tab_width"
+                                )
+                                val animatedOffset by animateDpAsState(
+                                    targetValue = currentTabPosition.left,
+                                    animationSpec = tween(durationMillis = 300),
+                                    label = "tab_offset"
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .wrapContentSize(Alignment.BottomStart)
+                                        .offset(x = animatedOffset)
+                                        .width(animatedWidth)
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .border(
+                                            width = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .background(
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                )
+                            }
+                        }
+                    ) {
+                        tabs.forEachIndexed { index, tab ->
+                            Tab(
+                                selected = selectedTabIndex == index,
+                                onClick = {
+                                    showSlidingPanels = false
+                                    selectedTabIndex = index
+                                    title = tab.title
+                                },
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                text = {
+                                    Text(
+                                        text = tab.title,
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = tab.icon,
+                                        contentDescription = tab.title
+                                    )
+                                },
+                                selectedContentColor = MaterialTheme.colorScheme.primary,
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
             }
-        }
         }
     }
 }
