@@ -9,7 +9,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +27,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -77,7 +80,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.FocusDirection
 import kotlin.text.Typography.nbsp
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun RiceTests() {
     // Sub-navigation state: false = main Rice screen, true = new calibration screen
@@ -142,6 +145,9 @@ fun RiceTests() {
 
     // Observe previous rice tests from database (ordered by date desc)
     val rices by riceRepo.getAllRices().collectAsState(initial = emptyList())
+
+    var riceMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    var selectedRiceId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     // Restore last selected calibration when data is available and nothing selected yet
     LaunchedEffect(calibrations, lastCalId) {
@@ -227,10 +233,10 @@ fun RiceTests() {
                                 }
                                 Spacer(modifier = Modifier.weight(1f))
                                 Column {
-                                    AverageOfTwoToggle(
-                                        isChecked = isAverageOfTwo,
-                                        onCheckedChange = {
-                                            isAverageOfTwo = it
+                                    Switch(
+                                        checked = isAverageOfTwo,
+                                        onCheckedChange = { checked ->
+                                            isAverageOfTwo = checked
                                             // Recalculate averages when mode changes
                                             val aValid = riceA.isFinite() && riceA > 0f
                                             val bValid = riceB.isFinite() && riceB > 0f
@@ -243,6 +249,9 @@ fun RiceTests() {
                                             averageRice = if (values.isNotEmpty()) values.average().toFloat() else 0f
                                             averagePCF = if (averageRice > 0f) RiceToPCF(averageRice) else 0f
                                         },
+                                        thumbContent = { Text("Average of Two") },
+                                        colors = SwitchDefaults.colors(),
+                                        enabled = true,
                                         modifier = Modifier.align(Alignment.End)
                                     )
                                 }
@@ -307,11 +316,21 @@ fun RiceTests() {
                                 Column(
                                     modifier = Modifier.align(CenterVertically)
                                 ) {
-                                    ButtonAddNewCalibration(
-                                        modifier = Modifier.align(Alignment.End)
-                                            .fillMaxSize(),
+                                    Button(
                                         onClick = { showNewCalibration = true },
-                                    )
+                                        modifier = Modifier.align(Alignment.End).fillMaxSize(),
+                                        enabled = true,
+                                        shape = MaterialTheme.shapes.small,
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
+                                    ) {
+                                        Text(
+                                            text = "+",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
                                 }
                             }
 
@@ -643,18 +662,25 @@ fun RiceTests() {
                                 val avgRice = rice.getAverageRice()
                                 val avgPcf = if (avgRice > 0f) RiceToPCF(avgRice) else 0f
 
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            expandedCards = if (isExpanded) {
-                                                expandedCards - rice.id
-                                            } else {
-                                                expandedCards + rice.id
-                                            }
-                                        },
-                                    elevation = CardDefaults.cardElevation(2.dp)
-                                ) {
+                                androidx.compose.foundation.layout.Box {
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .combinedClickable(
+                                                onClick = {
+                                                    expandedCards = if (isExpanded) {
+                                                        expandedCards - rice.id
+                                                    } else {
+                                                        expandedCards + rice.id
+                                                    }
+                                                },
+                                                onLongClick = {
+                                                    selectedRiceId = rice.id
+                                                    riceMenuExpanded = true
+                                                }
+                                            ),
+                                        elevation = CardDefaults.cardElevation(2.dp)
+                                    ) {
                                     Column(
                                         modifier = Modifier
                                             .padding(12.dp)
@@ -734,6 +760,23 @@ fun RiceTests() {
                                         }
                                     }
                                 }
+                                DropdownMenu(
+                                    expanded = riceMenuExpanded && selectedRiceId == rice.id,
+                                    onDismissRequest = { riceMenuExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Delete") },
+                                        onClick = {
+                                            val id = selectedRiceId
+                                            riceMenuExpanded = false
+                                            if (id != null) {
+                                                scope.launch {
+                                                    riceRepo.deleteRice(id)
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -787,4 +830,5 @@ fun AverageOfTwoToggle(
 @Composable
 fun RiceTestsPreview() {
     RiceTests()
+}
 }

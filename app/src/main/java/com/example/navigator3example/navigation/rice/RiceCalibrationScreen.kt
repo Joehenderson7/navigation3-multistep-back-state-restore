@@ -43,7 +43,13 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.foundation.layout.Box
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RiceCalibrationScreen() {
     val context = LocalContext.current
@@ -62,6 +68,9 @@ fun RiceCalibrationScreen() {
     // Load previous calibrations
     val calibrationsFlow = remember { repo.getAllCalibrations() }
     val calibrations by calibrationsFlow.collectAsState(initial = emptyList())
+
+    var calMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    var selectedCalId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     Column(
         modifier = Modifier
@@ -173,15 +182,41 @@ fun RiceCalibrationScreen() {
                 Divider()
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn(modifier = Modifier.fillMaxWidth().height(300.dp)) {
-                    items(calibrations) { cal ->
+                    items(calibrations, key = { it.id }) { cal ->
                         val dateStr = convertMillisToDate(cal.date)
-                        Column(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)) {
-                            Text(text = dateStr, style = MaterialTheme.typography.bodyMedium)
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(text = "Vessel A: ${String.format(Locale.getDefault(), "%.3f", cal.weightA)}")
-                                Text(text = "Vessel B: ${String.format(Locale.getDefault(), "%.3f", cal.weightB)}")
+                        Box {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {},
+                                        onLongClick = {
+                                            selectedCalId = cal.id
+                                            calMenuExpanded = true
+                                        }
+                                    )
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Text(text = dateStr, style = MaterialTheme.typography.bodyMedium)
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(text = "Vessel A: ${String.format(Locale.getDefault(), "%.3f", cal.weightA)}")
+                                    Text(text = "Vessel B: ${String.format(Locale.getDefault(), "%.3f", cal.weightB)}")
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = calMenuExpanded && selectedCalId == cal.id,
+                                onDismissRequest = { calMenuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    onClick = {
+                                        val id = selectedCalId
+                                        calMenuExpanded = false
+                                        if (id != null) {
+                                            scope.launch { repo.deleteCalibration(id) }
+                                        }
+                                    }
+                                )
                             }
                         }
                         Divider()

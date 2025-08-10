@@ -36,6 +36,11 @@ fun NavHost() {
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     var title by rememberSaveable { mutableStateOf("Densities") }
 
+    // Theme preference
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = com.example.navigator3example.data.preferences.PreferencesManager.get(context)
+    val isDarkTheme by prefs.darkThemeEnabled.collectAsState(initial = false)
+
     // Define the tabs
     val tabs = listOf(
         TabItem(
@@ -58,9 +63,10 @@ fun NavHost() {
     // Hold saveable state for each tab so switching tabs preserves inputs
     val saveableStateHolder = rememberSaveableStateHolder()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopBar(title)
-        // Content area with animated transitions
+    com.example.navigator3example.ui.theme.Navigator3ExampleTheme(darkTheme = isDarkTheme) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopBar(title)
+            // Content area with animated transitions
         AnimatedContent(
             targetState = selectedTabIndex,
             transitionSpec = {
@@ -147,6 +153,7 @@ fun NavHost() {
                     unselectedContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
+        }
         }
     }
 }

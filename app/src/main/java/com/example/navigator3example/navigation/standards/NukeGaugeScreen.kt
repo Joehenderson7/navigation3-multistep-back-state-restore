@@ -43,7 +43,13 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import com.example.navigator3example.data.nuke.NukeGaugeDatabase
 import com.example.navigator3example.data.nuke.NukeGaugeRepository
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.foundation.layout.Box
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NukeGaugeScreen() {
     val context = LocalContext.current
@@ -58,6 +64,9 @@ fun NukeGaugeScreen() {
 
     val calibrationsFlow = remember { repo.getAllCalibrations() }
     val calibrations by calibrationsFlow.collectAsState(initial = emptyList())
+
+    var gaugeMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    var selectedGaugeId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     Column(
         modifier = Modifier
@@ -156,16 +165,41 @@ fun NukeGaugeScreen() {
                 Divider()
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn(modifier = Modifier.fillMaxWidth().height(300.dp)) {
-                    items(calibrations) { cal ->
+                    items(calibrations, key = { it.id }) { cal ->
                         val dateStr = convertMillisToDate(cal.date)
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                        ) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(text = dateStr, style = MaterialTheme.typography.bodyMedium)
-                                Text(text = "SN: ${cal.serialNumber}")
+                        Box {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {},
+                                        onLongClick = {
+                                            selectedGaugeId = cal.id
+                                            gaugeMenuExpanded = true
+                                        }
+                                    )
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(text = dateStr, style = MaterialTheme.typography.bodyMedium)
+                                    Text(text = "SN: ${cal.serialNumber}")
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = gaugeMenuExpanded && selectedGaugeId == cal.id,
+                                onDismissRequest = { gaugeMenuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    onClick = {
+                                        val id = selectedGaugeId
+                                        gaugeMenuExpanded = false
+                                        if (id != null) {
+                                            scope.launch { repo.deleteCalibration(id) }
+                                        }
+                                    }
+                                )
                             }
                         }
                         Divider()

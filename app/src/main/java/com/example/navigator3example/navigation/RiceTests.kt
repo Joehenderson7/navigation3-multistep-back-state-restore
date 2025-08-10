@@ -57,9 +57,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material.icons.filled.Add
-import com.example.navigator3example.data.StandardDatabase
-import com.example.navigator3example.data.StandardRepository
-import com.example.navigator3example.data.StandardEntity
 
 @Composable
 fun RiceTests() {

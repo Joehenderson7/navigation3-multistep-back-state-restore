@@ -41,6 +41,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
 import androidx.compose.material3.FloatingActionButton
@@ -421,8 +423,36 @@ fun StandardsScreen(standard: Standard){
                         androidx.compose.material3.Divider()
                         Spacer(modifier = Modifier.height(8.dp))
                         LazyColumn(modifier = Modifier.fillMaxWidth().height(300.dp)) {
-                            items(displayedAnalyses) { analysis ->
-                                StandardCard(analysis = analysis)
+                            items(displayedAnalyses, key = { it.standard.id }) { analysis ->
+                                var menuExpanded by rememberSaveable { mutableStateOf(false) }
+                                Box {
+                                    StandardCard(
+                                        analysis = analysis,
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .combinedClickable(
+                                                onClick = {},
+                                                onLongClick = { menuExpanded = true }
+                                            )
+                                    ) {}
+
+                                    DropdownMenu(
+                                        expanded = menuExpanded,
+                                        onDismissRequest = { menuExpanded = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Delete") },
+                                            onClick = {
+                                                menuExpanded = false
+                                                coroutineScope.launch {
+                                                    repository.deleteStandard(analysis.standard.id)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
