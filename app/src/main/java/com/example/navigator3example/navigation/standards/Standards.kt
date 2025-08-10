@@ -37,6 +37,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
@@ -237,10 +239,12 @@ fun StandardsScreen(standard: Standard){
     com.example.navigator3example.ui.components.SlidingPanels(
         modifier = Modifier.fillMaxSize(),
         bottomTitle = "Saved Standards",
+        topTitle = "New Standard",
         topContent = {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
                 Card(

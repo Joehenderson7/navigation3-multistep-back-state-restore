@@ -30,6 +30,7 @@ import com.example.navigator3example.data.preferences.PreferencesManager
 import com.example.navigator3example.data.rice.RiceDatabase
 import com.example.navigator3example.data.rice.RiceRepository
 import com.example.navigator3example.ui.components.MaterialDateTimePicker
+import com.example.navigator3example.ui.components.SlidingPanels
 import kotlinx.coroutines.launch
 
 private fun riceAverage(rice: com.example.navigator3example.data.rice.RiceEntity): Double? {
@@ -49,10 +50,10 @@ private fun riceAverage(rice: com.example.navigator3example.data.rice.RiceEntity
 
 @Composable
 fun Densities() {
-    com.example.navigator3example.ui.components.SlidingPanels(
+    SlidingPanels(
         modifier = Modifier.fillMaxSize(),
         bottomTitle = "Density Tests",
-        topScrollable = false,
+        topTitle = "New Density Test",
         topContent = {
             NuclearDensityInputScreen(onViewAll = { /* Drag up the bottom panel to view all */ })
         },

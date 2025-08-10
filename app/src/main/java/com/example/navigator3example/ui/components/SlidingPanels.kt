@@ -7,10 +7,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Card
@@ -40,8 +37,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.navigator3example.navigation.densities.Densities
+import com.example.navigator3example.navigation.densities.DensitiesListScreen
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -58,9 +58,9 @@ import kotlin.math.abs
 fun SlidingPanels(
     modifier: Modifier = Modifier,
     bottomTitle: String? = null,
+    topTitle: String? = null,
     snapFractions: List<Float> = listOf(0.25f, 0.4f, 0.6f, 0.85f),
     initialFraction: Float = 0.4f,
-    topScrollable: Boolean = true,
     topContent: @Composable () -> Unit,
     bottomContent: @Composable ColumnScope.() -> Unit
 ) {
@@ -87,17 +87,29 @@ fun SlidingPanels(
                 .height(with(LocalDensity.current) { topHeightPx.toDp() })
         ) {
             // Use a Surface/Card for visual parity with existing screens
-            Surface(modifier = Modifier.fillMaxSize()) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .shadow(8.dp),
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+
+            ) {
                 Column(
-                    modifier = (if (topScrollable) {
-                        Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                    } else {
-                        Modifier.fillMaxSize()
-                    }).padding(12.dp)
+                    modifier = Modifier
+                        .fillMaxSize()
                 ) {
-                    topContent()
+                    TopPanelTopBar(title = topTitle)
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .padding(12.dp)
+                    ) {
+                        topContent()
+                    }
                 }
             }
         }
@@ -247,4 +259,25 @@ private fun fractionSaver(): Saver<MutableState<Float>, Any> {
         save = { listOf(it.value) },
         restore = { restored -> mutableStateOf(restored.firstOrNull() as? Float ?: 0.4f) }
     )
+}
+
+@Preview
+@Composable
+fun SlidingPanelsPreview() {
+    val (bottomTitle, setBottomTitle) = remember { mutableStateOf<String?>("Test") }
+    val (topTitle, setTopTitle) = remember { mutableStateOf<String?>("Test") }
+    val (snapFractions, setSnapFractions) = remember { mutableStateOf(listOf(0.25f, 0.4f, 0.6f, 0.85f)) }
+    val (initialFraction, setInitialFraction) = remember { mutableStateOf(0.4f) }
+    val (topContent, setTopContent) = remember { mutableStateOf<@Composable () -> Unit>({Densities()}) }
+    val (bottomContent, setBottomContent) = remember { mutableStateOf<@Composable ColumnScope.() -> Unit>({DensitiesListScreen { setBottomTitle("Joe Momma")}}) }
+     Column(modifier = Modifier.fillMaxSize()) {
+        SlidingPanels(
+            bottomTitle = bottomTitle,
+            topTitle = topTitle,
+            snapFractions = snapFractions,
+            initialFraction = initialFraction,
+            topContent = topContent,
+            bottomContent = bottomContent
+        )
+     }
 }

@@ -23,6 +23,7 @@ import com.example.navigator3example.navigation.rice.RiceTests
 import com.example.navigator3example.ui.components.TopBar
 import com.example.navigator3example.navigation.standards.StandardsScreen
 import com.example.navigator3example.navigation.standards.Standard
+import com.example.navigator3example.ui.components.SlidingPanels
 
 
 // Tab data class for Material 3 tabs
@@ -97,7 +98,7 @@ fun NavHost() {
                 )
                 if (showSlidingPanels) {
                     // Show the SlidingPanels screen when selected from the drawer
-                    com.example.navigator3example.ui.components.SlidingPanels(
+                    SlidingPanels(
                         modifier = Modifier.weight(1f),
                         topContent = {
                             // Simple placeholder content for the top panel

@@ -78,6 +78,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.text.style.LineHeightStyle
 import kotlin.text.Typography.nbsp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -203,8 +204,8 @@ fun RiceTests() {
             // Main Rice screen content with SlidingPanels
             com.example.navigator3example.ui.components.SlidingPanels(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
-                bottomTitle = "Previous Rice Tests",
-                topScrollable = false,
+                bottomTitle = "Rice Tests",
+                topTitle = "New Rice",
                 topContent = {
                     // Top Panel - HMA Rice Test Input
                     Card(
@@ -215,7 +216,7 @@ fun RiceTests() {
                     ) {
                         LazyColumn(
                             modifier = Modifier
-                                .padding(24.dp)
+                                .padding(10.dp)
                                 .fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
@@ -223,15 +224,11 @@ fun RiceTests() {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                 ){
-                                    Column {
-                                        Text(
-                                            "🌾 HMA Rice Test",
-                                            style = MaterialTheme.typography.headlineMedium
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                    }
                                     Spacer(modifier = Modifier.weight(1f))
-                                    Column {
+                                    Row {
+                                        Text(text = "Two Tests",
+                                            modifier = Modifier.align (CenterVertically ))
+                                        Spacer(modifier = Modifier.width(16.dp))
                                         Switch(
                                             checked = isAverageOfTwo,
                                             onCheckedChange = { checked ->
@@ -248,10 +245,9 @@ fun RiceTests() {
                                                 averageRice = if (values.isNotEmpty()) values.average().toFloat() else 0f
                                                 averagePCF = if (averageRice > 0f) RiceToPCF(averageRice) else 0f
                                             },
-                                            thumbContent = { Text("Average of Two") },
                                             colors = SwitchDefaults.colors(),
                                             enabled = true,
-                                            modifier = Modifier.align(Alignment.End)
+                                            modifier = Modifier
                                         )
                                     }
 
