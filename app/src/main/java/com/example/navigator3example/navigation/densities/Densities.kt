@@ -23,6 +23,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.navigator3example.calculations.RiceToPCF
+import com.example.navigator3example.data.densities.DensityTestDatabase
+import com.example.navigator3example.data.densities.DensityTestRepository
+import com.example.navigator3example.data.preferences.PreferencesManager
+import com.example.navigator3example.data.rice.RiceDatabase
+import com.example.navigator3example.data.rice.RiceRepository
 import com.example.navigator3example.ui.components.MaterialDateTimePicker
 import kotlinx.coroutines.launch
 
@@ -88,16 +94,28 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
 
     // Load rice list from Room and Preferences
     val context = androidx.compose.ui.platform.LocalContext.current
-    val riceDb = remember { com.example.navigator3example.data.rice.RiceDatabase.getDatabase(context) }
-    val riceRepo = remember { com.example.navigator3example.data.rice.RiceRepository(riceDb.riceDao()) }
-    val prefs = remember { com.example.navigator3example.data.preferences.PreferencesManager.get(context) }
+    val riceDb = remember { RiceDatabase.getDatabase(context) }
+    val riceRepo = remember { RiceRepository(riceDb.riceDao()) }
+    val prefs = remember { PreferencesManager.get(context) }
     val storedCorrectionFactor by prefs.correctionFactor.collectAsState(initial = "")
     val scope = rememberCoroutineScope()
+
+    // Density tests repository (Room)
+    val densityDb = remember { DensityTestDatabase.getDatabase(context) }
+    val densityRepo = remember { DensityTestRepository(densityDb.densityTestDao()) }
 
     // Initialize local correctionFactor from stored preference once
     LaunchedEffect(storedCorrectionFactor) {
         if (correctionFactor.isEmpty() && storedCorrectionFactor.isNotEmpty()) {
             correctionFactor = storedCorrectionFactor
+        }
+    }
+
+    // Prefill next test number from preferences (only if empty)
+    val nextNumberPref by prefs.nextDensityTestNumber.collectAsState(initial = 1)
+    LaunchedEffect(nextNumberPref) {
+        if (nextTestNumber.isEmpty()) {
+            nextTestNumber = nextNumberPref.toString()
         }
     }
 
@@ -114,7 +132,7 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
         if (averageWet != null && cf != null) averageWet + cf else null
     }
     val riceAvg = selectedRice?.let { riceAverage(it) }
-    val ricePcf = riceAvg?.let { com.example.navigator3example.calculations.RiceToPCF(it.toFloat()).toDouble() }
+    val ricePcf = riceAvg?.let { RiceToPCF(it.toFloat()).toDouble() }
     val percentCompaction = remember(correctedAverage, ricePcf) {
         if (correctedAverage != null && ricePcf != null && ricePcf > 0.0) correctedAverage / ricePcf * 100.0 else null
     }
@@ -263,16 +281,42 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                     modifier = Modifier.weight(1f)
                 )
             }
-
-
-
-            AssistChip(
-                onClick = onViewAll,
-                label = { Text("View all tests") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.List, contentDescription = null)
+            // Save and navigate actions
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            densityRepo.insert(
+                                testNumber = nextTestNumber,
+                                testDate = testDate,
+                                location = location,
+                                offset = offSet,
+                                riceId = selectedRiceId,
+                                correctionFactor = correctionFactor.toDoubleOrNull(),
+                                wet1 = wet1.toDoubleOrNull(),
+                                wet2 = wet2.toDoubleOrNull(),
+                                wet3 = wet3.toDoubleOrNull(),
+                                wet4 = wet4.toDoubleOrNull(),
+                            )
+                            // Increment next density test number for subsequent tests
+                            prefs.incrementNextDensityTestNumber()
+                            // After save, navigate to list
+                            onViewAll()
+                        }
+                    },
+                    enabled = nextTestNumber.isNotBlank() && testDate.isNotBlank()
+                ) {
+                    Text("Save")
                 }
-            )
+
+                AssistChip(
+                    onClick = onViewAll,
+                    label = { Text("View all tests") },
+                    leadingIcon = {
+                        Icon(imageVector = Icons.Default.List, contentDescription = null)
+                    }
+                )
+            }
 
             Text(
                 text = "Enter four wet densities, select Rice, and a Correction Factor to see calculations above.",
@@ -282,57 +326,6 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
     }
 }
 
-@Composable
-private fun DensitiesListScreen(onBack: () -> Unit) {
-    val items = remember {
-        // Placeholder list of tests; could be backed by Room later
-        List(20) { i -> "Density Test #${i + 1}" }
-    }
-
-    Scaffold { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                }
-                Text(text = "Densities1", style = MaterialTheme.typography.titleLarge)
-            }
-            Spacer(Modifier.height(8.dp))
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                items(items) { item ->
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.elevatedCardColors()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(text = item, style = MaterialTheme.typography.titleMedium)
-                            Text(text = "Dry —", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Preview
 @Composable
