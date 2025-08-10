@@ -21,7 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.navigator3example.ui.components.MaterialDateTimePicker
+import kotlinx.coroutines.launch
 
 private fun riceAverage(rice: com.example.navigator3example.data.rice.RiceEntity): Double? {
     val a = com.example.navigator3example.calculations.CalculateRice(
@@ -66,22 +69,38 @@ fun Densities() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
+    // Date selection state (top of screen)
+    var testDate by rememberSaveable { mutableStateOf("") }
+
     // Inputs per requirement
+    var nextTestNumber by rememberSaveable { mutableStateOf("") }
     var location by rememberSaveable { mutableStateOf("") }
+    var offSet by rememberSaveable { mutableStateOf("") }
     var wet1 by rememberSaveable { mutableStateOf("") }
     var wet2 by rememberSaveable { mutableStateOf("") }
     var wet3 by rememberSaveable { mutableStateOf("") }
     var wet4 by rememberSaveable { mutableStateOf("") }
-    var correctionFactor by rememberSaveable { mutableStateOf("1.000") }
+    var correctionFactor by rememberSaveable { mutableStateOf("") }
 
     // Rice dropdown state
     var riceExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedRiceId by rememberSaveable { mutableStateOf<Long?>(null) }
 
-    // Load rice list from Room
+    // Load rice list from Room and Preferences
     val context = androidx.compose.ui.platform.LocalContext.current
     val riceDb = remember { com.example.navigator3example.data.rice.RiceDatabase.getDatabase(context) }
     val riceRepo = remember { com.example.navigator3example.data.rice.RiceRepository(riceDb.riceDao()) }
+    val prefs = remember { com.example.navigator3example.data.preferences.PreferencesManager.get(context) }
+    val storedCorrectionFactor by prefs.correctionFactor.collectAsState(initial = "")
+    val scope = rememberCoroutineScope()
+
+    // Initialize local correctionFactor from stored preference once
+    LaunchedEffect(storedCorrectionFactor) {
+        if (correctionFactor.isEmpty() && storedCorrectionFactor.isNotEmpty()) {
+            correctionFactor = storedCorrectionFactor
+        }
+    }
+
     val rices by riceRepo.getAllRices().collectAsState(initial = emptyList())
     val selectedRice = rices.firstOrNull { it.id == selectedRiceId }
 
@@ -92,7 +111,7 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
     }
     val cf = correctionFactor.toDoubleOrNull()
     val correctedAverage = remember(averageWet, cf) {
-        if (averageWet != null && cf != null) averageWet * cf else null
+        if (averageWet != null && cf != null) averageWet + cf else null
     }
     val riceAvg = selectedRice?.let { riceAverage(it) }
     val ricePcf = riceAvg?.let { com.example.navigator3example.calculations.RiceToPCF(it.toFloat()).toDouble() }
@@ -114,52 +133,101 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Test Number
+                OutlinedTextField(
+                    value = nextTestNumber,
+                    onValueChange = { nextTestNumber = it },
+                    label = { Text("Test Number") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Date
+                MaterialDateTimePicker(
+                    value = testDate,
+                    onDateSelected = { testDate = it },
+                    label = "Test Date",
+                    placeholder = "Select Date",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Location
+                OutlinedTextField(
+                    value = location,
+                    onValueChange = { location = it },
+                    label = { Text("Location / Station") },
+                    modifier = Modifier.weight(1f)
+                )
+                // Off set
+                OutlinedTextField(
+                    value = offSet,
+                    onValueChange = { offSet = it },
+                    label = { Text("Offset") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Rice dropdown
+                ExposedDropdownMenuBox(
+                    expanded = riceExpanded,
+                    onExpandedChange = { riceExpanded = !riceExpanded },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    OutlinedTextField(
+                        value = selectedRice?.let { it.name } ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Rice") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = riceExpanded) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = riceExpanded,
+                        onDismissRequest = { riceExpanded = false }
+                    ) {
+                        rices.forEach { rice ->
+                            val pcf = riceAverage(rice)?.let { com.example.navigator3example.calculations.RiceToPCF(it.toFloat()) }
+                            DropdownMenuItem(
+                                text = { Text(text = "${rice.name} • ${String.format("%.1f PCF", pcf)}") },
+                                onClick = {
+                                    selectedRiceId = rice.id
+                                    riceExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = correctionFactor,
+                    onValueChange = { newValue ->
+                        correctionFactor = newValue
+                        // Persist the last used correction factor
+                        scope.launch { prefs.setCorrectionFactor(newValue) }
+                    },
+                    label = { Text("Correction Factor") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
             // Summary display (similar to Standards’ header card)
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(text = "Average: ${averageWet?.let { String.format("%.2f", it) } ?: "—"}")
                     Text(text = "Corrected Avg: ${correctedAverage?.let { String.format("%.2f", it) } ?: "—"}")
                     val riceLabel = ricePcf?.let { String.format("%.1f PCF", it) } ?: "—"
                     Text(text = "% Compaction (vs Rice $riceLabel): ${percentCompaction?.let { String.format("%.1f%%", it) } ?: "—"}")
-                }
-            }
-
-            OutlinedTextField(
-                value = location,
-                onValueChange = { location = it },
-                label = { Text("Location / Station") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Rice dropdown
-            androidx.compose.material3.ExposedDropdownMenuBox(
-                expanded = riceExpanded,
-                onExpandedChange = { riceExpanded = !riceExpanded }
-            ) {
-                OutlinedTextField(
-                    value = selectedRice?.let { "${it.name}" } ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Rice") },
-                    trailingIcon = { androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon(expanded = riceExpanded) },
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth()
-                )
-                ExposedDropdownMenu(
-                    expanded = riceExpanded,
-                    onDismissRequest = { riceExpanded = false }
-                ) {
-                    rices.forEach { rice ->
-                        val pcf = riceAverage(rice)?.let { com.example.navigator3example.calculations.RiceToPCF(it.toFloat()) }
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text(text = "${rice.name} • ${String.format("%.1f PCF", pcf)}") },
-                            onClick = {
-                                selectedRiceId = rice.id
-                                riceExpanded = false
-                            }
-                        )
-                    }
                 }
             }
 
@@ -196,13 +264,7 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                 )
             }
 
-            OutlinedTextField(
-                value = correctionFactor,
-                onValueChange = { correctionFactor = it },
-                label = { Text("Correction Factor") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
+
 
             AssistChip(
                 onClick = onViewAll,
@@ -241,7 +303,7 @@ private fun DensitiesListScreen(onBack: () -> Unit) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                 }
-                Text(text = "Densities", style = MaterialTheme.typography.titleLarge)
+                Text(text = "Densities1", style = MaterialTheme.typography.titleLarge)
             }
             Spacer(Modifier.height(8.dp))
             LazyColumn(
@@ -272,3 +334,8 @@ private fun DensitiesListScreen(onBack: () -> Unit) {
     }
 }
 
+@Preview
+@Composable
+private fun DensitiesScreenPreview() {
+    Densities()
+}

@@ -75,6 +75,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.FocusDirection
+import kotlin.text.Typography.nbsp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -286,7 +287,7 @@ fun RiceTests() {
                                             onDismissRequest = { expanded = false }
                                         ) {
                                             calibrations.forEach { cal ->
-                                                val label = "${convertMillisToDate(cal.date)}  •  A: ${String.format(Locale.getDefault(), "%.3f", cal.weightA)}  •  B: ${String.format(Locale.getDefault(), "%.3f", cal.weightB)}"
+                                                val label = "${convertMillisToDate(cal.date)} \u00A0A: ${String.format(Locale.getDefault(), "%.1f", cal.weightA)}  •  B: ${String.format(Locale.getDefault(), "%.1f", cal.weightB)}"
                                                 DropdownMenuItem(
                                                     text = { Text(label) },
                                                     onClick = {
