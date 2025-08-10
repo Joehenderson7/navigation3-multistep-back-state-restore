@@ -153,18 +153,55 @@ fun StandardsScreen(standard: Standard){
     val database = StandardDatabase.getDatabase(context)
     val repository = StandardRepository(database.standardDao())
     val coroutineScope = rememberCoroutineScope()
+
+    // Preferences: last selected gauge serial number
+    val prefs = remember { com.example.navigator3example.data.preferences.PreferencesManager.get(context) }
+    val savedSerialFromPrefs by prefs.gaugeSerialNumber.collectAsState(initial = "")
     
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = standard.date)
+    var selectedDateMillis by rememberSaveable { mutableStateOf<Long?>(standard.date) }
     var densityCount by rememberSaveable { mutableStateOf(standard.ds.toString()) }
     var moistureCount by rememberSaveable { mutableStateOf(standard.ms.toString()) }
     var gaugeSerialNumber by rememberSaveable { mutableStateOf(standard.serialNumber) }
     var saveMessage by rememberSaveable { mutableStateOf("") }
+
+    // If local state is empty, default to last saved serial
+    LaunchedEffect(savedSerialFromPrefs, gaugeSerialNumber) {
+        if (gaugeSerialNumber.isEmpty() && savedSerialFromPrefs.isNotEmpty()) {
+            gaugeSerialNumber = savedSerialFromPrefs
+        }
+    }
     
-    // Observe saved standards from database
-    val savedStandards by repository.getAllStandards().collectAsState(initial = emptyList())
+    // Point-of-input validation states
+    var densityError by rememberSaveable { mutableStateOf<String?>(null) }
+    var moistureError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun validateDensity(input: String) {
+        val s = input.trim()
+        densityError = when {
+            s.isEmpty() -> "Required"
+            !s.all { it.isDigit() } -> "Digits only"
+            s.length > 6 -> "Too many digits"
+            else -> null
+        }
+    }
+    fun validateMoisture(input: String) {
+        val s = input.trim()
+        moistureError = when {
+            s.isEmpty() -> "Required"
+            !s.all { it.isDigit() } -> "Digits only"
+            s.length > 6 -> "Too many digits"
+            else -> null
+        }
+    }
+    
+    // Observe standards filtered by selected gauge serial number
+    val standardsFlow = remember(gaugeSerialNumber) {
+        if (gaugeSerialNumber.isNotEmpty()) repository.getStandardsBySerialNumberFlow(gaugeSerialNumber)
+        else kotlinx.coroutines.flow.flowOf(emptyList())
+    }
+    val savedStandards by standardsFlow.collectAsState(initial = emptyList())
     var showAllStandards by rememberSaveable { mutableStateOf(false) }
     var standardAnalyses by remember { mutableStateOf<List<StandardAnalysis>>(emptyList()) }
-    var showFabMenu by rememberSaveable { mutableStateOf(false) }
     var showNukeGauge by rememberSaveable { mutableStateOf(false) }
 
     // Inline sub-navigation for Nuke Gauge screen (Dialog fullscreen)
@@ -189,7 +226,7 @@ fun StandardsScreen(standard: Standard){
         }
     }
 
-    val selectedDate = datePickerState.selectedDateMillis?.let {
+    val selectedDate = selectedDateMillis?.let {
         convertMillisToDate(it)
     } ?: ""
 
@@ -201,198 +238,199 @@ fun StandardsScreen(standard: Standard){
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Material Date Time Picker (based on standards logic with theme influence)
-            MaterialDateTimePicker(
-                value = selectedDate,
-                onDateSelected = { newDate ->
-                    // Update the datePickerState when date is selected
-                    val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
-                    try {
-                        val date = formatter.parse(newDate)
-                        date?.let {
-                            // The component handles the date selection internally
-                        }
-                    } catch (e: Exception) {
-                        // Handle parsing error if needed
-                    }
-                },
-                label = "Date",
-                placeholder = "Select Date",
-                initialDateMillis = standard.date,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Row{
-                // Gauge dropdown populated from Room NukeGauge database
-                GaugeSerialDropdown(
-                    selected = gaugeSerialNumber,
-                    onSelectedChange = { gaugeSerialNumber = it },
-                    modifier = Modifier.fillMaxWidth(.85f)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column (modifier = Modifier.align(CenterVertically)){
-                    ButtonAddNewNukeGauge (
-                        modifier = Modifier.fillMaxWidth(),
-                    ){ showNukeGauge = true }
-                }
-
-            }
-
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth()
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                // Density Count Input Field
-                OutlinedTextField(
-                    value = densityCount,
-                    onValueChange = { newValue ->
-                        // Only allow numeric input
-                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-                            densityCount = newValue
-                        }
-                    },
-                    label = { Text("Density Count") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(.47f)
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(text = "New Standard", style = MaterialTheme.typography.titleMedium)
 
-                Spacer(modifier = Modifier.width(16.dp))
-
-                // Moisture Count Input Field
-                OutlinedTextField(
-                    value = moistureCount,
-                    onValueChange = { newValue ->
-                        // Only allow numeric input
-                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-                            moistureCount = newValue
-                        }
-                    },
-                    label = { Text("Moisture Count") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Save Button
-            Button(
-                onClick = {
-                    val selectedDateMillis = datePickerState.selectedDateMillis
-                    if (selectedDateMillis != null && 
-                        gaugeSerialNumber.isNotEmpty() && 
-                        densityCount.isNotEmpty() && 
-                        moistureCount.isNotEmpty()) {
-                        
-                        coroutineScope.launch {
+                    // Material Date Time Picker (based on standards logic with theme influence)
+                    MaterialDateTimePicker(
+                        value = selectedDate,
+                        onDateSelected = { newDate ->
+                            val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
                             try {
-                                repository.insertStandard(
-                                    serialNumber = gaugeSerialNumber,
-                                    date = selectedDateMillis,
-                                    densityCount = densityCount.toInt(),
-                                    moistureCount = moistureCount.toInt()
-                                )
-                                saveMessage = "Standard saved successfully!"
-                                // Clear fields after saving
-                                gaugeSerialNumber = ""
-                                densityCount = ""
-                                moistureCount = ""
+                                val date = formatter.parse(newDate)
+                                selectedDateMillis = date?.time
                             } catch (e: Exception) {
-                                saveMessage = "Error saving standard: ${e.message}"
+                                selectedDateMillis = null
                             }
+                        },
+                        label = "Date",
+                        placeholder = "Select Date",
+                        initialDateMillis = selectedDateMillis,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row{
+                        // Gauge dropdown populated from Room NukeGauge database
+                        GaugeSerialDropdown(
+                            selected = gaugeSerialNumber,
+                            onSelectedChange = { newSerial ->
+                                gaugeSerialNumber = newSerial
+                                coroutineScope.launch { prefs.setGaugeSerialNumber(newSerial) }
+                            },
+                            modifier = Modifier.fillMaxWidth(.85f)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column (modifier = Modifier.align(CenterVertically)){
+                            ButtonAddNewNukeGauge (
+                                modifier = Modifier.fillMaxWidth(),
+                            ){ showNukeGauge = true }
                         }
-                    } else {
-                        saveMessage = "Please fill all fields"
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Save Standard")
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Save message
-            if (saveMessage.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = saveMessage,
-                    color = if (saveMessage.contains("Error") || saveMessage.contains("Please fill")) 
-                        MaterialTheme.colorScheme.error 
-                    else 
-                        MaterialTheme.colorScheme.primary
-                )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // Density Count Input Field
+                        OutlinedTextField(
+                            value = densityCount,
+                            onValueChange = { newValue ->
+                                // Point-of-input validation: digits only and length cap
+                                if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                                    densityCount = newValue
+                                    validateDensity(newValue)
+                                } else {
+                                    densityError = "Digits only"
+                                }
+                            },
+                            isError = densityError != null,
+                            supportingText = {
+                                if (densityError != null) Text(densityError!!)
+                            },
+                            label = { Text("Density Count") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth(.47f)
+                        )
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        // Moisture Count Input Field
+                        OutlinedTextField(
+                            value = moistureCount,
+                            onValueChange = { newValue ->
+                                // Point-of-input validation: digits only and length cap
+                                if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
+                                    moistureCount = newValue
+                                    validateMoisture(newValue)
+                                } else {
+                                    moistureError = "Digits only"
+                                }
+                            },
+                            isError = moistureError != null,
+                            supportingText = {
+                                if (moistureError != null) Text(moistureError!!)
+                            },
+                            label = { Text("Moisture Count") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // Save Button
+                    val canSave = gaugeSerialNumber.isNotEmpty() &&
+                        densityCount.isNotEmpty() && moistureCount.isNotEmpty() &&
+                        densityError == null && moistureError == null
+
+                    Button(
+                        onClick = {
+                            val selectedDate = selectedDateMillis
+                            if (selectedDate != null && canSave) {
+                                coroutineScope.launch {
+                                    try {
+                                        repository.insertStandard(
+                                            serialNumber = gaugeSerialNumber,
+                                            date = selectedDate, 
+                                            densityCount = densityCount.toInt(),
+                                            moistureCount = moistureCount.toInt()
+                                        )
+                                        saveMessage = "Standard saved successfully!"
+                                        // Clear fields after saving
+                                        gaugeSerialNumber = ""
+                                        densityCount = ""
+                                        moistureCount = ""
+                                        densityError = null
+                                        moistureError = null
+                                    } catch (e: Exception) {
+                                        saveMessage = "Error saving standard: ${'$'}{e.message}"
+                                    }
+                                }
+                            } else {
+                                // Trigger validations to show messages
+                                validateDensity(densityCount)
+                                validateMoisture(moistureCount)
+                                saveMessage = "Please correct the highlighted fields"
+                            }
+                        },
+                        enabled = canSave,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Save Standard")
+                    }
+
+                    // Save message
+                    if (saveMessage.isNotEmpty()) {
+                        Text(
+                            text = saveMessage,
+                            color = if (saveMessage.contains("Error") || saveMessage.contains("Please fill")) 
+                                MaterialTheme.colorScheme.error 
+                            else 
+                                MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
             
             // Display saved standards
             if (standardAnalyses.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                val displayedAnalyses = if (showAllStandards) {
-                    standardAnalyses
-                } else {
-                    standardAnalyses.take(4)
-                }
-                
-                Row(
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Text(
-                        text = "Standards (${displayedAnalyses.size}/${standardAnalyses.size})",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (standardAnalyses.size > 4) {
-                        Button(
-                            onClick = { showAllStandards = !showAllStandards }
-                        ) {
-                            Text(if (showAllStandards) "Show Less" else "Show All")
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        val displayedAnalyses = if (showAllStandards) {
+                            standardAnalyses
+                        } else {
+                            standardAnalyses.take(4)
                         }
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                LazyColumn {
-                    items(displayedAnalyses) { analysis ->
-                        StandardCard(analysis = analysis)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Saved Standards (${displayedAnalyses.size}/${standardAnalyses.size})",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            if (standardAnalyses.size > 4) {
+                                Button(onClick = { showAllStandards = !showAllStandards }) {
+                                    Text(if (showAllStandards) "Show Less" else "Show All")
+                                }
+                            }
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
+                        androidx.compose.material3.Divider()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyColumn(modifier = Modifier.fillMaxWidth().height(300.dp)) {
+                            items(displayedAnalyses) { analysis ->
+                                StandardCard(analysis = analysis)
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
                     }
                 }
             }
         }
         
-        // Floating Action Button with docked popup menu
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-        ) {
-            FloatingActionButton(
-                onClick = { showFabMenu = !showFabMenu }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Menu"
-                )
-            }
-            
-            // Dropdown menu docked to FAB
-            DropdownMenu(
-                expanded = showFabMenu,
-                onDismissRequest = { showFabMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Generate Test Data") },
-                    onClick = {
-                        showFabMenu = false
-                        // TODO: Implement generate test data functionality
-                    }
-                )
-            }
-        }
     }
 }
 

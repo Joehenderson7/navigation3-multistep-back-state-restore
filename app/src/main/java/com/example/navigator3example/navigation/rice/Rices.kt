@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,26 +48,33 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.navigator3example.calculations.CalculateRice
+import com.example.navigator3example.calculations.RiceToPCF
 import java.text.SimpleDateFormat
 import java.util.Locale
 import com.example.navigator3example.ui.components.MaterialDateTimePicker
 import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
+import com.example.navigator3example.data.rice.RiceDatabase
+import com.example.navigator3example.data.rice.RiceRepository
+import com.example.navigator3example.data.rice.RiceCalibration
+import com.example.navigator3example.data.rice.getAverageRice
+import com.example.navigator3example.data.rice.getRiceA
+import com.example.navigator3example.data.rice.getRiceB
+import com.example.navigator3example.ui.components.convertMillisToDate
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.navigator3example.data.preferences.PreferencesManager
+import kotlinx.coroutines.launch
 
-data class RiceTestData(
-    val date: String,
-    val testNumber: Int,
-    val rice: Float,
-    val pcf: Float,
-    val dryWeightA: Float = 0.0f,
-    val dryWeightB: Float = 0.0f,
-    val wetWeightA: Float = 0.0f,
-    val wetWeightB: Float = 0.0f,
-    val calibration: String = "Calibrate 1",
-    val riceA: Float = 2.452f,
-    val riceB: Float = 2.452f,
-    val ricePcfA: Float = 153.2f,
-    val ricePcfB: Float = 153.2f
-)
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusDirection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +95,13 @@ fun RiceTests() {
     var wetWeightA by rememberSaveable { mutableStateOf("") }
     var wetWeightB by rememberSaveable { mutableStateOf("") }
 
+    // Focus management for navigating between fields via IME actions
+    val focusManager = LocalFocusManager.current
+    val dryARequester = remember { FocusRequester() }
+    val wetARequester = remember { FocusRequester() }
+    val dryBRequester = remember { FocusRequester() }
+    val wetBRequester = remember { FocusRequester() }
+
     //UI values
     var isAverageOfTwo by rememberSaveable { mutableStateOf(true) }
     var isFormValid by rememberSaveable { mutableStateOf(false) }
@@ -106,30 +121,37 @@ fun RiceTests() {
     var averageRice by rememberSaveable { mutableStateOf(0.0f) }
     var averagePCF by rememberSaveable { mutableStateOf(0.0f) }
 
+    // Track selected calibration object for saving
+    var selectedCalibration by remember { mutableStateOf<RiceCalibration?>(null) }
+
     // State for tracking expanded rice cards
-    var expandedCards by rememberSaveable { mutableStateOf(setOf<Int>()) }
+    var expandedCards by rememberSaveable { mutableStateOf(setOf<Long>()) }
 
-    // Calibrate options for dropdown
-    val calibrateOptions = listOf("Calibrate 1", "Calibrate 2", "Calibrate 3", "Calibrate 4", "Calibrate 5")
+    // Calibrate options from Room (RiceRepository)
+    val context = LocalContext.current
+    val riceDb = remember { RiceDatabase.getDatabase(context) }
+    val riceRepo = remember { RiceRepository(riceDb.riceDao()) }
+    val calibrationsFlow = remember { riceRepo.getAllCalibrations() }
+    val calibrations by calibrationsFlow.collectAsState(initial = emptyList())
 
-    // Sample data for previous rice tests
-    val previousTests = remember {
-        (1..10).map { index ->
-            RiceTestData(
-                date = "2025-08-${String.format("%02d", index)}",
-                testNumber = index,
-                rice = 2.400f + (index * 0.01f),
-                pcf = 150.0f + (index * 2.5f),
-                dryWeightA = 100.0f + (index * 1.5f),
-                dryWeightB = 101.0f + (index * 1.2f),
-                wetWeightA = 120.0f + (index * 2.0f),
-                wetWeightB = 121.5f + (index * 1.8f),
-                calibration = "Calibrate ${(index % 5) + 1}",
-                riceA = 2.450f + (index * 0.002f),
-                riceB = 2.454f + (index * 0.003f),
-                ricePcfA = 152.0f + (index * 1.1f),
-                ricePcfB = 154.0f + (index * 1.3f)
-            )
+    // Preferences for remembering last selected calibration
+    val prefs = remember { PreferencesManager.get(context) }
+    val scope = rememberCoroutineScope()
+    val lastCalId by prefs.lastRiceCalibrationId.collectAsState(initial = -1L)
+
+    // Observe previous rice tests from database (ordered by date desc)
+    val rices by riceRepo.getAllRices().collectAsState(initial = emptyList())
+
+    // Restore last selected calibration when data is available and nothing selected yet
+    LaunchedEffect(calibrations, lastCalId) {
+        if (selectedCalibrate.isEmpty() && lastCalId != -1L) {
+            calibrations.firstOrNull { it.id == lastCalId }?.let { cal ->
+                val label = "${convertMillisToDate(cal.date)}  •  A: ${String.format(Locale.getDefault(), "%.3f", cal.weightA)}  •  B: ${String.format(Locale.getDefault(), "%.3f", cal.weightB)}"
+                selectedCalibrate = label
+                calA = cal.weightA
+                calB = cal.weightB
+                selectedCalibration = cal
+            }
         }
     }
 
@@ -159,12 +181,31 @@ fun RiceTests() {
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
+                // Validation helpers and state
+                fun isDecimalInput(s: String): Boolean {
+                    // Allow digits and at most one dot
+                    return s.isEmpty() || s.all { it.isDigit() || it == '.' } && s.count { it == '.' } <= 1
+                }
+                var dryAError by rememberSaveable { mutableStateOf<String?>(null) }
+                var wetAError by rememberSaveable { mutableStateOf<String?>(null) }
+                var dryBError by rememberSaveable { mutableStateOf<String?>(null) }
+                var wetBError by rememberSaveable { mutableStateOf<String?>(null) }
+                
+                fun validateRequiredDecimal(input: String): String? {
+                    return when {
+                        input.isEmpty() -> "Required"
+                        !isDecimalInput(input) -> "Invalid number"
+                        input == "." -> "Invalid number"
+                        else -> null
+                    }
+                }
                 // Top Panel - HMA Rice Test Input
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(0.6f),
-                    elevation = CardDefaults.cardElevation(8.dp)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     LazyColumn(
                         modifier = Modifier
@@ -181,12 +222,26 @@ fun RiceTests() {
                                         "🌾 HMA Rice Test",
                                         style = MaterialTheme.typography.headlineMedium
                                     )
+                                    Spacer(modifier = Modifier.height(8.dp))
                                 }
                                 Spacer(modifier = Modifier.weight(1f))
                                 Column {
                                     AverageOfTwoToggle(
                                         isChecked = isAverageOfTwo,
-                                        onCheckedChange = { isAverageOfTwo = it },
+                                        onCheckedChange = {
+                                            isAverageOfTwo = it
+                                            // Recalculate averages when mode changes
+                                            val aValid = riceA.isFinite() && riceA > 0f
+                                            val bValid = riceB.isFinite() && riceB > 0f
+                                            pcfA = if (aValid) RiceToPCF(riceA) else 0f
+                                            pcfB = if (bValid) RiceToPCF(riceB) else 0f
+                                            val values = if (isAverageOfTwo) listOfNotNull(
+                                                if (aValid) riceA else null,
+                                                if (bValid) riceB else null
+                                            ) else listOfNotNull(if (aValid) riceA else null)
+                                            averageRice = if (values.isNotEmpty()) values.average().toFloat() else 0f
+                                            averagePCF = if (averageRice > 0f) RiceToPCF(averageRice) else 0f
+                                        },
                                         modifier = Modifier.align(Alignment.End)
                                     )
                                 }
@@ -230,11 +285,17 @@ fun RiceTests() {
                                             expanded = expanded,
                                             onDismissRequest = { expanded = false }
                                         ) {
-                                            calibrateOptions.forEach { option ->
+                                            calibrations.forEach { cal ->
+                                                val label = "${convertMillisToDate(cal.date)}  •  A: ${String.format(Locale.getDefault(), "%.3f", cal.weightA)}  •  B: ${String.format(Locale.getDefault(), "%.3f", cal.weightB)}"
                                                 DropdownMenuItem(
-                                                    text = { Text(option) },
+                                                    text = { Text(label) },
                                                     onClick = {
-                                                        selectedCalibrate = option
+                                                        selectedCalibrate = label
+                                                        calA = cal.weightA
+                                                        calB = cal.weightB
+                                                        selectedCalibration = cal
+                                                        // Save preference for last selected calibration
+                                                        scope.launch { prefs.setLastRiceCalibrationId(cal.id) }
                                                         expanded = false
                                                     }
                                                 )
@@ -258,23 +319,36 @@ fun RiceTests() {
                             if(isAverageOfTwo){
                                 Row {
                                     Column (modifier = Modifier.fillMaxWidth(.48f)) {
-                                        Text("Rice A: $riceA")
-                                        Text("Rice B: $riceB")
+                                        Text("Rice A: ${String.format(Locale.getDefault(), "%.3f", riceA)}")
+                                        Text("Rice B: ${String.format(Locale.getDefault(), "%.3f", riceB)}")
                                     }
                                     Column (
                                         horizontalAlignment = Alignment.End,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text("Rice A PCF: $pcfA: ")
-                                        Text("Rice B PCF: $pcfB: ")
+                                        Text("Rice A PCF: ${String.format(Locale.getDefault(), "%.1f", pcfA)}")
+                                        Text("Rice B PCF: ${String.format(Locale.getDefault(), "%.1f", pcfB)}")
+                                    }
+                                }
+                            } else {
+                                // Show single rice mode values for clarity
+                                Row {
+                                    Column (modifier = Modifier.fillMaxWidth(.48f)) {
+                                        Text("Rice A: ${String.format(Locale.getDefault(), "%.3f", riceA)}")
+                                    }
+                                    Column (
+                                        horizontalAlignment = Alignment.End,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Rice A PCF: ${String.format(Locale.getDefault(), "%.1f", pcfA)}")
                                     }
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
                             
-                            Text("Average Rice: 2.453")
-                            Text("Average PCF: 153.2")
+                            Text("Average Rice: ${String.format(Locale.getDefault(), "%.3f", averageRice)}")
+                            Text("Average PCF: ${String.format(Locale.getDefault(), "%.1f", averagePCF)}")
                         }
 
                         //User input Rice Test
@@ -283,18 +357,89 @@ fun RiceTests() {
                                 OutlinedTextField(
                                     value = dryWeightA,
                                     label = { Text("Dry Weight A") },
-                                    modifier = Modifier.fillMaxWidth(.48f),
-                                    onValueChange = { dryWeightA = it },
+                                    modifier = Modifier
+                                        .fillMaxWidth(.48f)
+                                        .focusRequester(dryARequester),
+                                    onValueChange = { newValue ->
+                                        if (isDecimalInput(newValue)) {
+                                            dryWeightA = newValue
+                                            dryAError = validateRequiredDecimal(newValue)
+                                            // Only compute when both inputs valid
+                                            val d = newValue.toFloatOrNull()
+                                            val w = wetWeightA.toFloatOrNull()
+                                            val cal = calA
+                                            if (d != null && w != null) {
+                                                val result = CalculateRice(d, w, cal)
+                                                if (!result.isNaN()) {
+                                                    riceA = result
+                                                    pcfA = RiceToPCF(riceA)
+                                                    val aValid = riceA.isFinite() && riceA > 0f
+                                                    val bValid = riceB.isFinite() && riceB > 0f
+                                                    val values = if (isAverageOfTwo) listOfNotNull(
+                                                        if (aValid) riceA else null,
+                                                        if (bValid) riceB else null
+                                                    ) else listOfNotNull(if (aValid) riceA else null)
+                                                    averageRice = if (values.isNotEmpty()) values.average().toFloat() else 0f
+                                                    averagePCF = if (averageRice > 0f) RiceToPCF(averageRice) else 0f
+                                                }
+                                            }
+                                        } else {
+                                            dryAError = "Invalid number"
+                                        }
+                                    },
+                                    isError = dryAError != null,
+                                    supportingText = { dryAError?.let { Text(it) } },
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Decimal,
+                                        imeAction = ImeAction.Next
+                                    ),
+                                    keyboardActions = KeyboardActions(
+                                        onNext = { wetARequester.requestFocus() }
+                                    ),
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 OutlinedTextField(
                                     value = wetWeightA,
                                     label = { Text("Wet Weight A") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onValueChange = {
-                                        wetWeightA = it
-                                        riceA = CalculateRice(dryWeightA.toFloat(), wetWeightA.toFloat(), calA)
-                                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(wetARequester),
+                                    onValueChange = { newValue ->
+                                        if (isDecimalInput(newValue)) {
+                                            wetWeightA = newValue
+                                            wetAError = validateRequiredDecimal(newValue)
+                                            val d = dryWeightA.toFloatOrNull()
+                                            val w = newValue.toFloatOrNull()
+                                            val cal = calA
+                                            if (d != null && w != null) {
+                                                val result = CalculateRice(d, w, cal)
+                                                if (!result.isNaN()) {
+                                                    riceA = result
+                                                    pcfA = RiceToPCF(riceA)
+                                                    val aValid = riceA.isFinite() && riceA > 0f
+                                                    val bValid = riceB.isFinite() && riceB > 0f
+                                                    val values = if (isAverageOfTwo) listOfNotNull(
+                                                        if (aValid) riceA else null,
+                                                        if (bValid) riceB else null
+                                                    ) else listOfNotNull(if (aValid) riceA else null)
+                                                    averageRice = if (values.isNotEmpty()) values.average().toFloat() else 0f
+                                                    averagePCF = if (averageRice > 0f) RiceToPCF(averageRice) else 0f
+                                                }
+                                            }
+                                        } else {
+                                            wetAError = "Invalid number"
+                                        }
+                                    },
+                                    isError = wetAError != null,
+                                    supportingText = { wetAError?.let { Text(it) } },
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = KeyboardType.Decimal,
+                                        imeAction = if (isAverageOfTwo) ImeAction.Next else ImeAction.Done
+                                    ),
+                                    keyboardActions = KeyboardActions(
+                                        onNext = { dryBRequester.requestFocus() },
+                                        onDone = { focusManager.clearFocus() }
+                                    ),
                                 )
                             }
                             Row(
@@ -305,16 +450,88 @@ fun RiceTests() {
                                 if(isAverageOfTwo){
                                     OutlinedTextField(
                                         value = dryWeightB,
-                                        onValueChange = { dryWeightB = it },
+                                        onValueChange = { newValue ->
+                                            if (isDecimalInput(newValue)) {
+                                                dryWeightB = newValue
+                                                dryBError = validateRequiredDecimal(newValue)
+                                                val d = newValue.toFloatOrNull()
+                                                val w = wetWeightB.toFloatOrNull()
+                                                val cal = calB
+                                                if (d != null && w != null) {
+                                                    val result = CalculateRice(d, w, cal)
+                                                    if (!result.isNaN()) {
+                                                        riceB = result
+                                                        pcfB = RiceToPCF(riceB)
+                                                        val aValid = riceA.isFinite() && riceA > 0f
+                                                        val bValid = riceB.isFinite() && riceB > 0f
+                                                        val values = if (isAverageOfTwo) listOfNotNull(
+                                                            if (aValid) riceA else null,
+                                                            if (bValid) riceB else null
+                                                        ) else listOfNotNull(if (aValid) riceA else null)
+                                                        averageRice = if (values.isNotEmpty()) values.average().toFloat() else 0f
+                                                        averagePCF = if (averageRice > 0f) RiceToPCF(averageRice) else 0f
+                                                    }
+                                                }
+                                            } else {
+                                                dryBError = "Invalid number"
+                                            }
+                                        },
                                         label = { Text("Dry Weight B") },
-                                        modifier = Modifier.fillMaxWidth(.48f),
+                                        isError = dryBError != null,
+                                        supportingText = { dryBError?.let { Text(it) } },
+                                        modifier = Modifier
+                                            .fillMaxWidth(.48f)
+                                            .focusRequester(dryBRequester),
+                                        keyboardOptions = KeyboardOptions(
+                                            keyboardType = KeyboardType.Decimal,
+                                            imeAction = ImeAction.Next
+                                        ),
+                                        keyboardActions = KeyboardActions(
+                                            onNext = { wetBRequester.requestFocus() }
+                                        ),
                                     )
                                     Spacer(modifier = Modifier.width(2.dp))
                                     OutlinedTextField(
                                         value = wetWeightB,
-                                        onValueChange = { wetWeightB = it },
+                                        onValueChange = { newValue ->
+                                            if (isDecimalInput(newValue)) {
+                                                wetWeightB = newValue
+                                                wetBError = validateRequiredDecimal(newValue)
+                                                val d = dryWeightB.toFloatOrNull()
+                                                val w = newValue.toFloatOrNull()
+                                                val cal = calB
+                                                if (d != null && w != null) {
+                                                    val result = CalculateRice(d, w, cal)
+                                                    if (!result.isNaN()) {
+                                                        riceB = result
+                                                        pcfB = RiceToPCF(riceB)
+                                                        val aValid = riceA.isFinite() && riceA > 0f
+                                                        val bValid = riceB.isFinite() && riceB > 0f
+                                                        val values = if (isAverageOfTwo) listOfNotNull(
+                                                            if (aValid) riceA else null,
+                                                            if (bValid) riceB else null
+                                                        ) else listOfNotNull(if (aValid) riceA else null)
+                                                        averageRice = if (values.isNotEmpty()) values.average().toFloat() else 0f
+                                                        averagePCF = if (averageRice > 0f) RiceToPCF(averageRice) else 0f
+                                                    }
+                                                }
+                                            } else {
+                                                wetBError = "Invalid number"
+                                            }
+                                        },
                                         label = { Text("Wet Weight B") },
-                                        modifier = Modifier.fillMaxWidth()
+                                        isError = wetBError != null,
+                                        supportingText = { wetBError?.let { Text(it) } },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .focusRequester(wetBRequester),
+                                        keyboardOptions = KeyboardOptions(
+                                            keyboardType = KeyboardType.Decimal,
+                                            imeAction = ImeAction.Done
+                                        ),
+                                        keyboardActions = KeyboardActions(
+                                            onDone = { focusManager.clearFocus() }
+                                        ),
                                     )
                                 }
                             }
@@ -323,7 +540,72 @@ fun RiceTests() {
 
                         item {
                             Button(
-                                onClick = { /* TODO: Save test */ },
+                                onClick = {
+                                    // Validate required fields
+                                    val aDry = dryWeightA.toFloatOrNull()
+                                    val aWet = wetWeightA.toFloatOrNull()
+                                    val bDry = dryWeightB.toFloatOrNull()
+                                    val bWet = wetWeightB.toFloatOrNull()
+                                    val hasCal = selectedCalibration != null || (calA != 0f || calB != 0f)
+
+                                    val singleModeOk = aDry != null && aWet != null
+                                    val dualModeOk = singleModeOk && bDry != null && bWet != null
+
+                                    val inputsOk = if (isAverageOfTwo) dualModeOk else singleModeOk
+
+                                    if (!inputsOk || !hasCal) {
+                                        // Simple inline validation feedback by setting error texts
+                                        if (aDry == null) { /* show error via state already present */ }
+                                        if (aWet == null) { /* show error via state already present */ }
+                                        if (isAverageOfTwo) {
+                                            if (bDry == null) { /* show error */ }
+                                            if (bWet == null) { /* show error */ }
+                                        }
+                                        return@Button
+                                    }
+
+                                    // Parse date
+                                    val dateMillis = try {
+                                        if (testDate.isNotEmpty()) {
+                                            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                            sdf.isLenient = false
+                                            sdf.parse(testDate)?.time ?: System.currentTimeMillis()
+                                        } else System.currentTimeMillis()
+                                    } catch (e: Exception) { System.currentTimeMillis() }
+
+                                    // Build calibration to embed
+                                    val cal = selectedCalibration ?: RiceCalibration(
+                                        id = 0,
+                                        weightA = calA,
+                                        weightB = calB,
+                                        date = dateMillis
+                                    )
+
+                                    // In single mode, set B weights to 0 if not provided
+                                    val finalDryB = if (isAverageOfTwo) (bDry ?: 0f) else 0f
+                                    val finalWetB = if (isAverageOfTwo) (bWet ?: 0f) else 0f
+
+                                    scope.launch {
+                                        riceRepo.insertRice(
+                                            name = "HMA Rice Test",
+                                            date = dateMillis,
+                                            dryWeightA = aDry ?: 0f,
+                                            dryWeightB = finalDryB,
+                                            wetWeightA = aWet ?: 0f,
+                                            wetWeightB = finalWetB,
+                                            calibration = cal
+                                        )
+
+                                        // Reset inputs minimally
+                                        // Keep calibration selection as convenience
+                                        dryWeightA = ""
+                                        wetWeightA = ""
+                                        if (isAverageOfTwo) {
+                                            dryWeightB = ""
+                                            wetWeightB = ""
+                                        }
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text("Save Rice Test")
@@ -339,7 +621,8 @@ fun RiceTests() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(0.4f),
-                    elevation = CardDefaults.cardElevation(8.dp)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp)
@@ -353,18 +636,20 @@ fun RiceTests() {
                         LazyColumn(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(previousTests.size) { index ->
-                                val testData = previousTests[index]
-                                val isExpanded = expandedCards.contains(testData.testNumber)
-                                
+                            items(rices, key = { it.id }) { rice ->
+                                val isExpanded = expandedCards.contains(rice.id)
+
+                                val avgRice = rice.getAverageRice()
+                                val avgPcf = if (avgRice > 0f) RiceToPCF(avgRice) else 0f
+
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
                                             expandedCards = if (isExpanded) {
-                                                expandedCards - testData.testNumber
+                                                expandedCards - rice.id
                                             } else {
-                                                expandedCards + testData.testNumber
+                                                expandedCards + rice.id
                                             }
                                         },
                                     elevation = CardDefaults.cardElevation(2.dp)
@@ -376,7 +661,7 @@ fun RiceTests() {
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            text = "Rice Test #${testData.testNumber}",
+                                            text = "Rice Test",
                                             style = MaterialTheme.typography.titleSmall
                                         )
                                         Row(
@@ -384,20 +669,16 @@ fun RiceTests() {
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Text(
-                                                text = "Date: ${testData.date}",
-                                                style = MaterialTheme.typography.bodySmall
+                                                text = "Date: ${convertMillisToDate(rice.date, "yyyy-MM-dd")}"
                                             )
                                             Text(
-                                                text = "Rice: ${String.format("%.3f", testData.rice)}",
-                                                style = MaterialTheme.typography.bodySmall
+                                                text = "Rice: ${String.format("%.3f", avgRice)}"
                                             )
                                         }
                                         Text(
-                                            text = "PCF: ${String.format("%.1f", testData.pcf)}",
-                                            style = MaterialTheme.typography.bodySmall
+                                            text = "PCF: ${String.format("%.1f", avgPcf)}"
                                         )
-                                        
-                                        // Expanded content with animation
+
                                         AnimatedVisibility(
                                             visible = isExpanded,
                                             enter = expandVertically(),
@@ -405,87 +686,49 @@ fun RiceTests() {
                                         ) {
                                             Column {
                                                 Spacer(modifier = Modifier.height(8.dp))
-                                                
-                                                Text(
-                                                    text = "Detailed Test Data",
-                                                    style = MaterialTheme.typography.titleSmall,
-                                                    modifier = Modifier.padding(bottom = 4.dp)
-                                                )
-                                                
-                                                Text(
-                                                    text = "Calibration: ${testData.calibration}",
-                                                    style = MaterialTheme.typography.bodySmall
-                                                )
-                                                
+
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     horizontalArrangement = Arrangement.SpaceBetween
                                                 ) {
                                                     Column {
-                                                        Text(
-                                                            text = "Dry Weights:",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
-                                                        Text(
-                                                            text = "A: ${String.format("%.1f", testData.dryWeightA)}",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
-                                                        Text(
-                                                            text = "B: ${String.format("%.1f", testData.dryWeightB)}",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
+                                                        Text("Dry Weights:")
+                                                        Text("A: ${String.format("%.1f", rice.dryWeightA)}")
+                                                        Text("B: ${String.format("%.1f", rice.dryWeightB)}")
                                                     }
                                                     Column {
-                                                        Text(
-                                                            text = "Wet Weights:",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
-                                                        Text(
-                                                            text = "A: ${String.format("%.1f", testData.wetWeightA)}",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
-                                                        Text(
-                                                            text = "B: ${String.format("%.1f", testData.wetWeightB)}",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
+                                                        Text("Wet Weights:")
+                                                        Text("A: ${String.format("%.1f", rice.wetWeightA)}")
+                                                        Text("B: ${String.format("%.1f", rice.wetWeightB)}")
                                                     }
                                                 }
-                                                
+
                                                 Spacer(modifier = Modifier.height(4.dp))
-                                                
+
+                                                val riceAVal = rice.getRiceA()
+                                                val riceBVal = rice.getRiceB()
+
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     horizontalArrangement = Arrangement.SpaceBetween
                                                 ) {
                                                     Column {
-                                                        Text(
-                                                            text = "Rice Values:",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
-                                                        Text(
-                                                            text = "A: ${String.format("%.3f", testData.riceA)}",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
-                                                        Text(
-                                                            text = "B: ${String.format("%.3f", testData.riceB)}",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
+                                                        Text("Rice Values:")
+                                                        Text("A: ${String.format("%.3f", riceAVal)}")
+                                                        Text("B: ${String.format("%.3f", riceBVal)}")
                                                     }
                                                     Column {
-                                                        Text(
-                                                            text = "PCF Values:",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
-                                                        Text(
-                                                            text = "A: ${String.format("%.1f", testData.ricePcfA)}",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
-                                                        Text(
-                                                            text = "B: ${String.format("%.1f", testData.ricePcfB)}",
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
+                                                        Text("PCF Values:")
+                                                        Text("A: ${String.format("%.1f", RiceToPCF(riceAVal))}")
+                                                        Text("B: ${String.format("%.1f", RiceToPCF(riceBVal))}")
                                                     }
                                                 }
+
+                                                Spacer(modifier = Modifier.height(4.dp))
+
+                                                Text(
+                                                    text = "Calibration: A ${String.format("%.3f", rice.calibration.weightA)} • B ${String.format("%.3f", rice.calibration.weightB)}"
+                                                )
                                             }
                                         }
                                     }

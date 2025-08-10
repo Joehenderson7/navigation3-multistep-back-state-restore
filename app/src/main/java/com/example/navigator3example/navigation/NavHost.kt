@@ -4,7 +4,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -18,10 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.navigator3example.navigation.rice.RiceTests
-import com.example.navigator3example.navigation.TopBar
+import com.example.navigator3example.ui.components.TopBar
 import com.example.navigator3example.navigation.standards.StandardsScreen
 import com.example.navigator3example.navigation.standards.Standard
 
@@ -48,7 +46,7 @@ fun NavHost() {
         TabItem(
             title = "Middle",
             icon = Icons.Default.Info,
-            screen = { DensityTests() }
+            screen = { com.example.navigator3example.navigation.densities.Densities() }
         ),
         TabItem(
             title = "Standards",
@@ -153,77 +151,5 @@ fun NavHost() {
     }
 }
 
-@Composable
-fun DensityTests() {
-    val textState = rememberSaveable { mutableStateOf("") }
-
-    // Sample data for density screen cards
-    val densityItems = remember {
-        (1..20).map { index ->
-            "Density Item $index" to "This is the description for density item $index"
-        }
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Header card with input and navigation
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(
-                    Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text("🏠 Density", style = MaterialTheme.typography.headlineLarge)
-                    OutlinedTextField(
-                        value = textState.value,
-                        onValueChange = { textState.value = it },
-                        label = { Text("State Protected Input") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-
-        // List of density items
-        items(densityItems.size) { index ->
-            val (title, description) = densityItems[index]
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
-                Column(
-                    Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Preview
-@Composable
-fun PreviewDensityScreen() {
-    DensityTests()
-}
 
 
