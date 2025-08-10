@@ -12,4 +12,5 @@ data class ProjectEntity(
     val id: Long = 0,
     var name: String,
     var projectNumber: String,
+    var projectLocation: String,
 )

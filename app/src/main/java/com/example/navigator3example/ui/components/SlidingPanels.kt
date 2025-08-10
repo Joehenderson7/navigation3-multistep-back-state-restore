@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -58,6 +59,7 @@ fun SlidingPanels(
     bottomTitle: String? = null,
     snapFractions: List<Float> = listOf(0.25f, 0.4f, 0.6f, 0.85f),
     initialFraction: Float = 0.4f,
+    topScrollable: Boolean = true,
     onMenuClick: (() -> Unit)? = null,
     topContent: @Composable () -> Unit,
     bottomContent: @Composable ColumnScope.() -> Unit
@@ -87,10 +89,13 @@ fun SlidingPanels(
             // Use a Surface/Card for visual parity with existing screens
             Surface(modifier = Modifier.fillMaxSize()) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(12.dp)
+                    modifier = (if (topScrollable) {
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    } else {
+                        Modifier.fillMaxSize()
+                    }).padding(12.dp)
                 ) {
                     topContent()
                 }
@@ -143,10 +148,13 @@ fun SlidingPanels(
 
                     // Content Area
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(12.dp)
+                        modifier = (if (topScrollable) {
+                            Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                        } else {
+                            Modifier.fillMaxSize()
+                        }).padding(12.dp)
                     ) {
                         bottomContent()
                     }

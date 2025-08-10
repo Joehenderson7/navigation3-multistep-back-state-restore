@@ -49,27 +49,18 @@ private fun riceAverage(rice: com.example.navigator3example.data.rice.RiceEntity
 
 @Composable
 fun Densities() {
-    var showList by rememberSaveable { mutableStateOf(false) }
-
-    AnimatedContent(
-        targetState = showList,
-        transitionSpec = {
-            if (targetState) {
-                (slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }, animationSpec = tween(300)) + fadeIn()) togetherWith
-                        (slideOutHorizontally(targetOffsetX = { fullWidth -> -fullWidth }, animationSpec = tween(300)) + fadeOut())
-            } else {
-                (slideInHorizontally(initialOffsetX = { fullWidth -> -fullWidth }, animationSpec = tween(300)) + fadeIn()) togetherWith
-                        (slideOutHorizontally(targetOffsetX = { fullWidth -> fullWidth }, animationSpec = tween(300)) + fadeOut())
-            }
+    com.example.navigator3example.ui.components.SlidingPanels(
+        modifier = Modifier.fillMaxSize(),
+        bottomTitle = "Density Tests",
+        topScrollable = false,
+        onMenuClick = null,
+        topContent = {
+            NuclearDensityInputScreen(onViewAll = { /* Drag up the bottom panel to view all */ })
         },
-        label = "densities_nav"
-    ) { isList ->
-        if (!isList) {
-            NuclearDensityInputScreen(onViewAll = { showList = true })
-        } else {
-            DensitiesListScreen(onBack = { showList = false })
+        bottomContent = {
+            DensitiesListScreen(onBack = { /* Bottom panel is draggable; no explicit back */ })
         }
-    }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
