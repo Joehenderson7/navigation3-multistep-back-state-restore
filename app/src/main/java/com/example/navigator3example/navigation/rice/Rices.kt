@@ -205,7 +205,6 @@ fun RiceTests() {
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 bottomTitle = "Previous Rice Tests",
                 topScrollable = false,
-                onMenuClick = null,
                 topContent = {
                     // Top Panel - HMA Rice Test Input
                     Card(

@@ -3,8 +3,6 @@ package com.example.navigator3example.navigation.densities
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -33,73 +31,84 @@ fun DensitiesListScreen(onBack: () -> Unit) {
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedId by rememberSaveable { mutableStateOf<Long?>(null) }
 
-    Scaffold { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Card(
+            modifier = Modifier.fillMaxSize(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                }
-                Text(text = "Densities", style = MaterialTheme.typography.titleLarge)
-            }
-            Spacer(Modifier.height(8.dp))
-            LazyColumn(
+            Column(
                 modifier = Modifier
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(tests, key = { it.id }) { test ->
-                    Box {
-                        ElevatedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .combinedClickable(
-                                    onClick = {},
-                                    onLongClick = {
-                                        selectedId = test.id
-                                        menuExpanded = true
-                                    }
-                                ),
-                            colors = CardDefaults.elevatedCardColors()
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            ) {
-                                Text(text = "Density Test #${test.testNumber}", style = MaterialTheme.typography.titleMedium)
-                                Spacer(Modifier.height(4.dp))
-                                Text(text = "Date: ${test.testDate}")
-                                if (test.location.isNotBlank()) {
-                                    Text(text = "Location: ${test.location}")
-                                }
-                            }
-                        }
+                Text(text = "Saved Density Tests", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
 
-                        DropdownMenu(
-                            expanded = menuExpanded && selectedId == test.id,
-                            onDismissRequest = { menuExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Delete") },
-                                onClick = {
-                                    val id = selectedId
-                                    menuExpanded = false
-                                    if (id != null) {
-                                        scope.launch {
-                                            densityRepo.deleteById(id)
+                if (tests.isEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("No density tests yet.")
+                    }
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(tests.size) { index ->
+                            val test = tests[index]
+                            Box {
+                                ElevatedCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {},
+                                            onLongClick = {
+                                                selectedId = test.id
+                                                menuExpanded = true
+                                            }
+                                        ),
+                                    colors = CardDefaults.elevatedCardColors()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp)
+                                    ) {
+                                        Text(text = "Density Test #${test.testNumber}", style = MaterialTheme.typography.titleMedium)
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(text = "Date: ${test.testDate}")
+                                        if (test.location.isNotBlank()) {
+                                            Text(text = "Location: ${test.location}")
                                         }
                                     }
                                 }
-                            )
+
+                                DropdownMenu(
+                                    expanded = menuExpanded && selectedId == test.id,
+                                    onDismissRequest = { menuExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Delete") },
+                                        onClick = {
+                                            val id = selectedId
+                                            menuExpanded = false
+                                            if (id != null) {
+                                                scope.launch {
+                                                    densityRepo.deleteById(id)
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }

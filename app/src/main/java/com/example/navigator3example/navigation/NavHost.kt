@@ -52,7 +52,7 @@ fun NavHost() {
             screen = { RiceTests() }
         ),
         TabItem(
-            title = "Middle",
+            title = "Densities",
             icon = Icons.Default.Info,
             screen = { com.example.navigator3example.navigation.densities.Densities() }
         ),
@@ -99,7 +99,6 @@ fun NavHost() {
                     // Show the SlidingPanels screen when selected from the drawer
                     com.example.navigator3example.ui.components.SlidingPanels(
                         modifier = Modifier.weight(1f),
-                        onMenuClick = { scope.launch { drawerState.open() } },
                         topContent = {
                             // Simple placeholder content for the top panel
                             Text(

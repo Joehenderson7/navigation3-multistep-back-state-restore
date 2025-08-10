@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,7 +61,6 @@ fun SlidingPanels(
     snapFractions: List<Float> = listOf(0.25f, 0.4f, 0.6f, 0.85f),
     initialFraction: Float = 0.4f,
     topScrollable: Boolean = true,
-    onMenuClick: (() -> Unit)? = null,
     topContent: @Composable () -> Unit,
     bottomContent: @Composable ColumnScope.() -> Unit
 ) {
@@ -120,7 +120,6 @@ fun SlidingPanels(
                     // Draggable Top Bar for the bottom panel
                     BottomPanelTopBar(
                         title = bottomTitle,
-                        onMenuClick = onMenuClick,
                         onDragDelta = { dyPx ->
                             // Positive dy => dragging down => reduce bottom height (collapse). Negative => expand.
                             val deltaFraction = dyPx / maxH
@@ -146,15 +145,11 @@ fun SlidingPanels(
                         }
                     )
 
-                    // Content Area
+                    // Content Area (no internal scroll; bottom screens manage their own scrolling)
                     Column(
-                        modifier = (if (topScrollable) {
-                            Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
-                        } else {
-                            Modifier.fillMaxSize()
-                        }).padding(12.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp)
                     ) {
                         bottomContent()
                     }
@@ -165,9 +160,35 @@ fun SlidingPanels(
 }
 
 @Composable
+private fun TopPanelTopBar(
+    title: String?,
+){
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ){
+        // Title (optional)
+        if (!title.isNullOrBlank()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(3f)
+            )
+        } else {
+            Spacer(modifier = Modifier.weight(3f))
+        }
+    }
+}
+
+
+@Composable
 private fun BottomPanelTopBar(
     title: String?,
-    onMenuClick: (() -> Unit)?,
     onDragDelta: (deltaY: Float) -> Unit,
     onDragEnd: (velocityY: Float) -> Unit
 ) {
@@ -189,21 +210,7 @@ private fun BottomPanelTopBar(
             .semantics { contentDescription = "Bottom panel handle" },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Handle indicator (center) for affordance
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
-            contentAlignment = Alignment.Center
-        ) {
-            // Small grabber line
-            Divider(
-                modifier = Modifier
-                    .width(36.dp)
-                    .height(4.dp)
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(2.dp))
-            )
-        }
+
 
         // Title (optional)
         if (!title.isNullOrBlank()) {
@@ -217,9 +224,20 @@ private fun BottomPanelTopBar(
             Spacer(modifier = Modifier.weight(3f))
         }
 
-        // Hamburger on the right
-        IconButton(onClick = { onMenuClick?.invoke() }) {
-            Icon(imageVector = Icons.Default.Menu, contentDescription = "Menu")
+        // Handle indicator (center) for affordance
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            contentAlignment = Alignment.Center
+        ) {
+            // Small grabber line
+            HorizontalDivider(
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(4.dp)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(2.dp))
+            )
         }
     }
 }

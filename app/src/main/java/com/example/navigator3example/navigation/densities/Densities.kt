@@ -9,8 +9,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.List
@@ -53,7 +53,6 @@ fun Densities() {
         modifier = Modifier.fillMaxSize(),
         bottomTitle = "Density Tests",
         topScrollable = false,
-        onMenuClick = null,
         topContent = {
             NuclearDensityInputScreen(onViewAll = { /* Drag up the bottom panel to view all */ })
         },
@@ -128,191 +127,196 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
         if (correctedAverage != null && ricePcf != null && ricePcf > 0.0) correctedAverage / ricePcf * 100.0 else null
     }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = onViewAll) {
-                Icon(Icons.Default.List, contentDescription = "View all tests")
-            }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.Top
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Test Number
-                OutlinedTextField(
-                    value = nextTestNumber,
-                    onValueChange = { nextTestNumber = it },
-                    label = { Text("Test Number") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Date
-                MaterialDateTimePicker(
-                    value = testDate,
-                    onDateSelected = { testDate = it },
-                    label = "Test Date",
-                    placeholder = "Select Date",
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Location
-                OutlinedTextField(
-                    value = location,
-                    onValueChange = { location = it },
-                    label = { Text("Location / Station") },
-                    modifier = Modifier.weight(1f)
-                )
-                // Off set
-                OutlinedTextField(
-                    value = offSet,
-                    onValueChange = { offSet = it },
-                    label = { Text("Offset") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Rice dropdown
-                ExposedDropdownMenuBox(
-                    expanded = riceExpanded,
-                    onExpandedChange = { riceExpanded = !riceExpanded },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    OutlinedTextField(
-                        value = selectedRice?.let { it.name } ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Rice") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = riceExpanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = riceExpanded,
-                        onDismissRequest = { riceExpanded = false }
-                    ) {
-                        rices.forEach { rice ->
-                            val pcf = riceAverage(rice)?.let { com.example.navigator3example.calculations.RiceToPCF(it.toFloat()) }
-                            DropdownMenuItem(
-                                text = { Text(text = "${rice.name} • ${String.format("%.1f PCF", pcf)}") },
-                                onClick = {
-                                    selectedRiceId = rice.id
-                                    riceExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-                OutlinedTextField(
-                    value = correctionFactor,
-                    onValueChange = { newValue ->
-                        correctionFactor = newValue
-                        // Persist the last used correction factor
-                        scope.launch { prefs.setCorrectionFactor(newValue) }
-                    },
-                    label = { Text("Correction Factor") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            // Summary display (similar to Standards’ header card)
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(text = "Average: ${averageWet?.let { String.format("%.2f", it) } ?: "—"}")
-                    Text(text = "Corrected Avg: ${correctedAverage?.let { String.format("%.2f", it) } ?: "—"}")
-                    val riceLabel = ricePcf?.let { String.format("%.1f PCF", it) } ?: "—"
-                    Text(text = "% Compaction (vs Rice $riceLabel): ${percentCompaction?.let { String.format("%.1f%%", it) } ?: "—"}")
-                }
-            }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Test Number
+                    OutlinedTextField(
+                        value = nextTestNumber,
+                        onValueChange = { nextTestNumber = it },
+                        label = { Text("Test Number") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = wet1,
-                    onValueChange = { wet1 = it },
-                    label = { Text("Wet Density 1") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = wet2,
-                    onValueChange = { wet2 = it },
-                    label = { Text("Wet Density 2") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = wet3,
-                    onValueChange = { wet3 = it },
-                    label = { Text("Wet Density 3") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = wet4,
-                    onValueChange = { wet4 = it },
-                    label = { Text("Wet Density 4") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            // Save and navigate actions
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            densityRepo.insert(
-                                testNumber = nextTestNumber,
-                                testDate = testDate,
-                                location = location,
-                                offset = offSet,
-                                riceId = selectedRiceId,
-                                correctionFactor = correctionFactor.toDoubleOrNull(),
-                                wet1 = wet1.toDoubleOrNull(),
-                                wet2 = wet2.toDoubleOrNull(),
-                                wet3 = wet3.toDoubleOrNull(),
-                                wet4 = wet4.toDoubleOrNull(),
-                            )
-                            // Increment next density test number for subsequent tests
-                            prefs.incrementNextDensityTestNumber()
-                            // After save, navigate to list
-                            onViewAll()
+                    // Date
+                    MaterialDateTimePicker(
+                        value = testDate,
+                        onDateSelected = { testDate = it },
+                        label = "Test Date",
+                        placeholder = "Select Date",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Location
+                    OutlinedTextField(
+                        value = location,
+                        onValueChange = { location = it },
+                        label = { Text("Location / Station") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    // Off set
+                    OutlinedTextField(
+                        value = offSet,
+                        onValueChange = { offSet = it },
+                        label = { Text("Offset") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Rice dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = riceExpanded,
+                        onExpandedChange = { riceExpanded = !riceExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = selectedRice?.let { it.name } ?: "",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Rice") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = riceExpanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = riceExpanded,
+                            onDismissRequest = { riceExpanded = false }
+                        ) {
+                            rices.forEach { rice ->
+                                val pcf = riceAverage(rice)?.let { com.example.navigator3example.calculations.RiceToPCF(it.toFloat()) }
+                                DropdownMenuItem(
+                                    text = { Text(text = "${rice.name} • ${String.format("%.1f PCF", pcf)}") },
+                                    onClick = {
+                                        selectedRiceId = rice.id
+                                        riceExpanded = false
+                                    }
+                                )
+                            }
                         }
-                    },
-                    enabled = nextTestNumber.isNotBlank() && testDate.isNotBlank()
-                ) {
-                    Text("Save")
+                    }
+                    OutlinedTextField(
+                        value = correctionFactor,
+                        onValueChange = { newValue ->
+                            correctionFactor = newValue
+                            // Persist the last used correction factor
+                            scope.launch { prefs.setCorrectionFactor(newValue) }
+                        },
+                        label = { Text("Correction Factor") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
-                AssistChip(
-                    onClick = onViewAll,
-                    label = { Text("View all tests") },
-                    leadingIcon = {
-                        Icon(imageVector = Icons.Default.List, contentDescription = null)
+                // Summary display (similar to Standards’ header card)
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(text = "Average: ${averageWet?.let { String.format("%.2f", it) } ?: "—"}")
+                        Text(text = "Corrected Avg: ${correctedAverage?.let { String.format("%.2f", it) } ?: "—"}")
+                        val riceLabel = ricePcf?.let { String.format("%.1f PCF", it) } ?: "—"
+                        Text(text = "% Compaction (vs Rice $riceLabel): ${percentCompaction?.let { String.format("%.1f%%", it) } ?: "—"}")
                     }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = wet1,
+                        onValueChange = { wet1 = it },
+                        label = { Text("Wet Density 1") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = wet2,
+                        onValueChange = { wet2 = it },
+                        label = { Text("Wet Density 2") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = wet3,
+                        onValueChange = { wet3 = it },
+                        label = { Text("Wet Density 3") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = wet4,
+                        onValueChange = { wet4 = it },
+                        label = { Text("Wet Density 4") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                // Save and navigate actions
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                densityRepo.insert(
+                                    testNumber = nextTestNumber,
+                                    testDate = testDate,
+                                    location = location,
+                                    offset = offSet,
+                                    riceId = selectedRiceId,
+                                    correctionFactor = correctionFactor.toDoubleOrNull(),
+                                    wet1 = wet1.toDoubleOrNull(),
+                                    wet2 = wet2.toDoubleOrNull(),
+                                    wet3 = wet3.toDoubleOrNull(),
+                                    wet4 = wet4.toDoubleOrNull(),
+                                )
+                                // Increment next density test number for subsequent tests
+                                prefs.incrementNextDensityTestNumber()
+                                // After save, navigate to list
+                                onViewAll()
+                            }
+                        },
+                        enabled = nextTestNumber.isNotBlank() && testDate.isNotBlank()
+                    ) {
+                        Text("Save")
+                    }
+
+                    AssistChip(
+                        onClick = onViewAll,
+                        label = { Text("View all tests") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.List, contentDescription = null)
+                        }
+                    )
+                }
+
+                Text(
+                    text = "Enter four wet densities, select Rice, and a Correction Factor to see calculations above.",
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
-
-            Text(
-                text = "Enter four wet densities, select Rice, and a Correction Factor to see calculations above.",
-                style = MaterialTheme.typography.bodyMedium
-            )
         }
     }
 }

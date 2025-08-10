@@ -237,7 +237,6 @@ fun StandardsScreen(standard: Standard){
     com.example.navigator3example.ui.components.SlidingPanels(
         modifier = Modifier.fillMaxSize(),
         bottomTitle = "Saved Standards",
-        onMenuClick = { showAllStandards = !showAllStandards },
         topContent = {
             Column(
                 modifier = Modifier
@@ -400,7 +399,7 @@ fun StandardsScreen(standard: Standard){
             // Display saved standards
             if (standardAnalyses.isNotEmpty()) {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
