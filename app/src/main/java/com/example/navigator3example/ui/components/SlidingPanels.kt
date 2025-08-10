@@ -179,7 +179,7 @@ private fun TopPanelTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ){
@@ -188,7 +188,7 @@ private fun TopPanelTopBar(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(3f)
             )
         } else {
@@ -217,7 +217,7 @@ private fun BottomPanelTopBar(
                 orientation = Orientation.Vertical,
                 onDragStopped = { velocity -> onDragEnd(velocity) }
             )
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 12.dp)
             .semantics { contentDescription = "Bottom panel handle" },
         verticalAlignment = Alignment.CenterVertically
@@ -229,7 +229,7 @@ private fun BottomPanelTopBar(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(3f)
             )
         } else {
@@ -248,7 +248,7 @@ private fun BottomPanelTopBar(
                 modifier = Modifier
                     .width(36.dp)
                     .height(4.dp)
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.onSurface, RoundedCornerShape(2.dp))
             )
         }
     }

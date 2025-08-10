@@ -20,7 +20,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.navigator3example.calculations.RiceToPCF
@@ -95,6 +101,16 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
     val densityDb = remember { DensityTestDatabase.getDatabase(context) }
     val densityRepo = remember { DensityTestRepository(densityDb.densityTestDao()) }
 
+    // Focus management
+    val focusManager = LocalFocusManager.current
+    val locationFocus = remember { FocusRequester() }
+    val offsetFocus = remember { FocusRequester() }
+    val correctionFocus = remember { FocusRequester() }
+    val wet1Focus = remember { FocusRequester() }
+    val wet2Focus = remember { FocusRequester() }
+    val wet3Focus = remember { FocusRequester() }
+    val wet4Focus = remember { FocusRequester() }
+
     // Initialize local correctionFactor from stored preference once
     LaunchedEffect(storedCorrectionFactor) {
         if (correctionFactor.isEmpty() && storedCorrectionFactor.isNotEmpty()) {
@@ -131,19 +147,19 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(2.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Top
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(2.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -152,7 +168,9 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                         value = nextTestNumber,
                         onValueChange = { nextTestNumber = it },
                         label = { Text("Test Number") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { locationFocus.requestFocus() }),
                         modifier = Modifier.weight(1f)
                     )
 
@@ -171,16 +189,25 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                     OutlinedTextField(
                         value = location,
                         onValueChange = { location = it },
-                        label = { Text("Location / Station") },
-                        modifier = Modifier.weight(1f)
+                        label = { Text("Location / Sta") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { offsetFocus.requestFocus() }),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(locationFocus)
                     )
                     // Off set
                     OutlinedTextField(
                         value = offSet,
                         onValueChange = { offSet = it },
                         label = { Text("Offset") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                        modifier = Modifier.weight(1f)
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { correctionFocus.requestFocus() }),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(offsetFocus)
                     )
                 }
 
@@ -200,6 +227,7 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                             modifier = Modifier
                                 .menuAnchor()
                                 .fillMaxWidth()
+                                .focusProperties { canFocus = false }
                         )
                         ExposedDropdownMenu(
                             expanded = riceExpanded,
@@ -225,8 +253,12 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                             scope.launch { prefs.setCorrectionFactor(newValue) }
                         },
                         label = { Text("Correction Factor") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { wet1Focus.requestFocus() }),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(correctionFocus)
                     )
                 }
 
@@ -249,15 +281,23 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                         value = wet1,
                         onValueChange = { wet1 = it },
                         label = { Text("Wet Density 1") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { wet2Focus.requestFocus() }),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(wet1Focus)
                     )
                     OutlinedTextField(
                         value = wet2,
                         onValueChange = { wet2 = it },
                         label = { Text("Wet Density 2") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { wet3Focus.requestFocus() }),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(wet2Focus)
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -265,15 +305,23 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                         value = wet3,
                         onValueChange = { wet3 = it },
                         label = { Text("Wet Density 3") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { wet4Focus.requestFocus() }),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(wet3Focus)
                     )
                     OutlinedTextField(
                         value = wet4,
                         onValueChange = { wet4 = it },
                         label = { Text("Wet Density 4") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(wet4Focus)
                     )
                 }
                 // Save and navigate actions
@@ -295,22 +343,21 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                                 )
                                 // Increment next density test number for subsequent tests
                                 prefs.incrementNextDensityTestNumber()
-                                // After save, navigate to list
-                                onViewAll()
+
+                                // Clear wet density inputs and increment the displayed test number
+                                wet1 = ""
+                                wet2 = ""
+                                wet3 = ""
+                                wet4 = ""
+                                nextTestNumber = (nextTestNumber.toIntOrNull()?.plus(1))?.toString() ?: nextTestNumber
+                                // Optionally refocus to first wet density for rapid entry
+                                wet1Focus.requestFocus()
                             }
                         },
                         enabled = nextTestNumber.isNotBlank() && testDate.isNotBlank()
                     ) {
                         Text("Save")
                     }
-
-                    AssistChip(
-                        onClick = onViewAll,
-                        label = { Text("View all tests") },
-                        leadingIcon = {
-                            Icon(imageVector = Icons.Default.List, contentDescription = null)
-                        }
-                    )
                 }
 
                 Text(

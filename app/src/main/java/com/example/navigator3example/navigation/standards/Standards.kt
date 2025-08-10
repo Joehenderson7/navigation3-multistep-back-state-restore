@@ -48,10 +48,9 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.text.style.TextAlign
 import com.example.navigator3example.data.standards.StandardDatabase
@@ -151,7 +150,7 @@ fun convertMillisToDate(millis: Long): String {
     return formatter.format(Date(millis))
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun StandardsScreen(standard: Standard){
     val context = LocalContext.current
@@ -436,34 +435,21 @@ fun StandardsScreen(standard: Standard){
                                 .weight(1f)
                         ) {
                             items(displayedAnalyses, key = { it.standard.id }) { analysis ->
-                                var menuExpanded by rememberSaveable { mutableStateOf(false) }
-                                Box {
-                                    StandardCard(
-                                        analysis = analysis,
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = {},
-                                                onLongClick = { menuExpanded = true }
-                                            )
-                                    ) {}
-
-                                    DropdownMenu(
-                                        expanded = menuExpanded,
-                                        onDismissRequest = { menuExpanded = false }
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text("Delete") },
-                                            onClick = {
-                                                menuExpanded = false
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {},
+                                            onLongClick = {
                                                 coroutineScope.launch {
                                                     repository.deleteStandard(analysis.standard.id)
                                                 }
                                             }
                                         )
-                                    }
+                                ) {
+                                    StandardCard(
+                                        analysis = analysis,
+                                    )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                             }

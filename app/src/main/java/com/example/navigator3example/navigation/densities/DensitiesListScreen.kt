@@ -34,7 +34,7 @@ fun DensitiesListScreen(onBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(5.dp)
     ) {
         Card(
             modifier = Modifier.fillMaxSize(),
