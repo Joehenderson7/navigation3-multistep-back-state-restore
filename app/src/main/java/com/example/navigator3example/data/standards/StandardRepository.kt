@@ -1,4 +1,4 @@
-package com.example.navigator3example.data
+package com.example.navigator3example.data.standards
 
 import kotlinx.coroutines.flow.Flow
 import java.util.Calendar
@@ -20,7 +20,8 @@ class StandardRepository(private val standardDao: StandardDao) {
             date = date,
             densityCount = densityCount,
             moistureCount = moistureCount,
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            gaugeSN = "3717"
         )
         standardDao.insertStandard(standard)
     }
@@ -69,48 +70,4 @@ class StandardRepository(private val standardDao: StandardDao) {
         standardDao.deleteAllStandards()
     }
     
-    suspend fun generateTestData() {
-        // Clear existing data first
-        deleteAllStandards()
-        
-        val baseTime = System.currentTimeMillis()
-        val serialNumber = "12345"
-        
-        // Generate 15 test standards with varied data
-        val testData = listOf(
-            // First 4 standards - baseline values
-            Triple(100, 50, 0L),  // Density: 100, Moisture: 50
-            Triple(102, 51, 1000L), // Density: 102, Moisture: 51
-            Triple(98, 49, 2000L),  // Density: 98, Moisture: 49
-            Triple(101, 52, 3000L), // Density: 101, Moisture: 52
-            
-            // Standards 5-8 - should mostly pass (within tolerance)
-            Triple(100, 50, 4000L), // Should PASS - exactly at average
-            Triple(99, 51, 5000L),  // Should PASS - density -1%, moisture +2%
-            Triple(101, 49, 6000L), // Should PASS - density +1%, moisture -2%
-            Triple(100, 50, 7000L), // Should PASS - exactly at average
-            
-            // Standards 9-12 - should fail (outside tolerance)
-            Triple(95, 45, 8000L),  // Should FAIL - density -5%, moisture -10%
-            Triple(105, 55, 9000L), // Should FAIL - density +5%, moisture +10%
-            Triple(92, 58, 10000L), // Should FAIL - both outside tolerance
-            Triple(108, 42, 11000L), // Should FAIL - both outside tolerance
-            
-            // Standards 13-15 - mixed results
-            Triple(100, 53, 12000L), // Should FAIL - moisture +3% (over 2% limit)
-            Triple(102, 50, 13000L), // Should FAIL - density +2% (over 1% limit)
-            Triple(99, 51, 14000L)   // Should PASS - both within tolerance
-        )
-        
-        testData.forEachIndexed { index, (density, moisture, timeOffset) ->
-            val standard = StandardEntity(
-                serialNumber = serialNumber,
-                date = baseTime - (14 - index) * 24 * 60 * 60 * 1000L, // Spread over 15 days
-                densityCount = density,
-                moistureCount = moisture,
-                timestamp = baseTime - (14 - index) * 24 * 60 * 60 * 1000L + timeOffset
-            )
-            standardDao.insertStandard(standard)
-        }
-    }
 }

@@ -1,35 +1,27 @@
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.navigator3example.navigation.RiceTests
-import com.example.navigator3example.navigation.TopBar
-import com.example.navigator3example.navigation.StandardsScreen
-import com.example.navigator3example.navigation.Standard
-import kotlinx.serialization.Serializable
-import com.example.navigator3example.ui.theme.topAppBarColors
+import com.example.navigator3example.navigation.rice.RiceTests
+import com.example.navigator3example.ui.components.TopBar
+import com.example.navigator3example.navigation.standards.StandardsScreen
+import com.example.navigator3example.navigation.standards.Standard
 
 
 // Tab data class for Material 3 tabs
@@ -54,7 +46,7 @@ fun NavHost() {
         TabItem(
             title = "Middle",
             icon = Icons.Default.Info,
-            screen = { DensityTests() }
+            screen = { com.example.navigator3example.navigation.densities.Densities() }
         ),
         TabItem(
             title = "Standards",
@@ -62,6 +54,9 @@ fun NavHost() {
             screen = { StandardsScreen(Standard(null, 0, 0)) }
         )
     )
+
+    // Hold saveable state for each tab so switching tabs preserves inputs
+    val saveableStateHolder = rememberSaveableStateHolder()
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopBar(title)
@@ -84,7 +79,10 @@ fun NavHost() {
             modifier = Modifier.weight(1f),
             label = "tab_content"
         ) { tabIndex ->
-            tabs[tabIndex].screen()
+            // Use a stable key per tab (e.g., title) to preserve its subtree state
+            saveableStateHolder.SaveableStateProvider(key = tabs[tabIndex].title) {
+                tabs[tabIndex].screen()
+            }
         }
 
         // Material 3 TabRow with animated outline - positioned at bottom
@@ -153,77 +151,5 @@ fun NavHost() {
     }
 }
 
-@Composable
-fun DensityTests() {
-    val textState = rememberSaveable { mutableStateOf("") }
-
-    // Sample data for density screen cards
-    val densityItems = remember {
-        (1..20).map { index ->
-            "Density Item $index" to "This is the description for density item $index"
-        }
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Header card with input and navigation
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(
-                    Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text("🏠 Density", style = MaterialTheme.typography.headlineLarge)
-                    OutlinedTextField(
-                        value = textState.value,
-                        onValueChange = { textState.value = it },
-                        label = { Text("State Protected Input") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-
-        // List of density items
-        items(densityItems.size) { index ->
-            val (title, description) = densityItems[index]
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
-                Column(
-                    Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Preview
-@Composable
-fun PreviewDensityScreen() {
-    DensityTests()
-}
 
 

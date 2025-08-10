@@ -1,8 +1,8 @@
 package com.example.navigator3example
 
-import com.example.navigator3example.data.StandardEntity
-import com.example.navigator3example.navigation.StandardStatistics
-import com.example.navigator3example.navigation.PassFailStatus
+import com.example.navigator3example.data.standards.StandardEntity
+import com.example.navigator3example.navigation.standards.StandardStatistics
+import com.example.navigator3example.navigation.standards.PassFailStatus
 import org.junit.Test
 import org.junit.Assert.*
 
@@ -66,10 +66,10 @@ class StandardAnalysisTest {
         // Given - Test data based on the generated test data
         // First 4 standards: density avg = 100.25, moisture avg = 50.5
         val baselineStandards = listOf(
-            StandardEntity(1, "12345", System.currentTimeMillis(), 100, 50, System.currentTimeMillis()),
-            StandardEntity(2, "12345", System.currentTimeMillis(), 102, 51, System.currentTimeMillis()),
-            StandardEntity(3, "12345", System.currentTimeMillis(), 98, 49, System.currentTimeMillis()),
-            StandardEntity(4, "12345", System.currentTimeMillis(), 101, 52, System.currentTimeMillis())
+            StandardEntity(1, "12345", System.currentTimeMillis(), 100, 50, System.currentTimeMillis(), "TEST_GAUGE"),
+            StandardEntity(2, "12345", System.currentTimeMillis(), 102, 51, System.currentTimeMillis(), "TEST_GAUGE"),
+            StandardEntity(3, "12345", System.currentTimeMillis(), 98, 49, System.currentTimeMillis(), "TEST_GAUGE"),
+            StandardEntity(4, "12345", System.currentTimeMillis(), 101, 52, System.currentTimeMillis(), "TEST_GAUGE")
         )
         
         val avgDensity = StandardStatistics.calculateAverage(baselineStandards.map { it.densityCount })

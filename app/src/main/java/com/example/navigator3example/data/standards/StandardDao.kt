@@ -1,4 +1,4 @@
-package com.example.navigator3example.data
+package com.example.navigator3example.data.standards
 
 import androidx.room.Dao
 import androidx.room.Insert
