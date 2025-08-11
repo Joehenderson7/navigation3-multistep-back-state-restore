@@ -79,6 +79,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.text.style.LineHeightStyle
+import com.example.navigator3example.ui.components.SlidingPanels
 import kotlin.text.Typography.nbsp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -202,7 +203,7 @@ fun RiceTests() {
                 }
             }
             // Main Rice screen content with SlidingPanels
-            com.example.navigator3example.ui.components.SlidingPanels(
+            SlidingPanels(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 bottomTitle = "Rice Tests",
                 topTitle = "New Rice",
