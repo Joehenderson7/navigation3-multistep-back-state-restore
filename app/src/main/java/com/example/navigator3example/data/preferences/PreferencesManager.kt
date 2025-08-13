@@ -1,6 +1,7 @@
 package com.example.navigator3example.data.preferences
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -95,6 +96,7 @@ class PreferencesManager private constructor(private val dataStore: DataStore<Pr
 
     // New: set next density test number explicitly
     suspend fun setNextDensityTestNumber(value: Int) {
+        Log.d("PreferencesManager", "setNextDensityTestNumber: $value")
         dataStore.edit { it[Keys.NEXT_DENSITY_TEST_NUMBER] = value }
     }
 
@@ -102,7 +104,9 @@ class PreferencesManager private constructor(private val dataStore: DataStore<Pr
     suspend fun incrementNextDensityTestNumber() {
         dataStore.edit { prefs ->
             val current = prefs[Keys.NEXT_DENSITY_TEST_NUMBER] ?: 1
-            prefs[Keys.NEXT_DENSITY_TEST_NUMBER] = current + 1
+            val next = current + 1
+            Log.d("PreferencesManager", "incrementNextDensityTestNumber: $current -> $next")
+            prefs[Keys.NEXT_DENSITY_TEST_NUMBER] = next
         }
     }
 

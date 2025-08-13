@@ -1,5 +1,6 @@
 package com.example.navigator3example.navigation.densities
 
+import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
@@ -37,6 +38,7 @@ import com.example.navigator3example.data.rice.RiceDatabase
 import com.example.navigator3example.data.rice.RiceRepository
 import com.example.navigator3example.ui.components.MaterialDateTimePicker
 import com.example.navigator3example.ui.components.SlidingPanels
+import com.example.navigator3example.ui.components.convertMillisToDate
 import kotlinx.coroutines.launch
 
 private fun riceAverage(rice: com.example.navigator3example.data.rice.RiceEntity): Double? {
@@ -72,11 +74,12 @@ fun Densities() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
+    val TAG = "Densities"
     // Date selection state (top of screen)
     var testDate by rememberSaveable { mutableStateOf("") }
 
     // Inputs per requirement
-    var nextTestNumber by rememberSaveable { mutableStateOf("") }
+    var testNumber by rememberSaveable { mutableStateOf("") }
     var location by rememberSaveable { mutableStateOf("") }
     var offSet by rememberSaveable { mutableStateOf("") }
     var wet1 by rememberSaveable { mutableStateOf("") }
@@ -118,11 +121,14 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
         }
     }
 
-    // Prefill next test number from preferences (only if empty)
-    val nextNumberPref by prefs.nextDensityTestNumber.collectAsState(initial = 1)
+    // Prefill next test number from preferences (avoid resetting to 1 on first composition)
+    var hasInitializedTestNumber by rememberSaveable { mutableStateOf(false) }
+    val nextNumberPref by prefs.nextDensityTestNumber.collectAsState(initial = -1)
     LaunchedEffect(nextNumberPref) {
-        if (nextTestNumber.isEmpty()) {
-            nextTestNumber = nextNumberPref.toString()
+        if (!hasInitializedTestNumber && nextNumberPref > 0) {
+            Log.d(TAG, "Loaded next density test number from prefs: $nextNumberPref")
+            testNumber = nextNumberPref.toString()
+            hasInitializedTestNumber = true
         }
     }
 
@@ -165,8 +171,8 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     // Test Number
                     OutlinedTextField(
-                        value = nextTestNumber,
-                        onValueChange = { nextTestNumber = it },
+                        value = testNumber,
+                        onValueChange = { testNumber = it },
                         label = { Text("Test Number") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
@@ -197,7 +203,7 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                             .weight(1f)
                             .focusRequester(locationFocus)
                     )
-                    // Off set
+                    // Offset
                     OutlinedTextField(
                         value = offSet,
                         onValueChange = { offSet = it },
@@ -219,7 +225,11 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                         modifier = Modifier.weight(1f)
                     ) {
                         OutlinedTextField(
-                            value = selectedRice?.let { it.name } ?: "",
+                            value = selectedRice?.let { r ->
+                                val dateStr = convertMillisToDate(r.date, "M/d")
+                                val avg = riceAverage(r)?.let { String.format("%.3f", it) } ?: "—"
+                                "$dateStr: $avg " + String.format("%.1f", ricePcf)
+                            } ?: "",
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Rice") },
@@ -329,8 +339,9 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                     Button(
                         onClick = {
                             scope.launch {
+                                val savedNumber = testNumber
                                 densityRepo.insert(
-                                    testNumber = nextTestNumber,
+                                    testNumber = savedNumber,
                                     testDate = testDate,
                                     location = location,
                                     offset = offSet,
@@ -341,20 +352,25 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                                     wet3 = wet3.toDoubleOrNull(),
                                     wet4 = wet4.toDoubleOrNull(),
                                 )
-                                // Increment next density test number for subsequent tests
-                                prefs.incrementNextDensityTestNumber()
+
+                                // Compute next number and persist exactly once
+                                val next = (savedNumber.toIntOrNull()?.plus(1)) ?: 1
+                                Log.d(TAG, "Saved density test number: $savedNumber; setting next to: $next")
+                                prefs.setNextDensityTestNumber(next)
 
                                 // Clear wet density inputs and increment the displayed test number
                                 wet1 = ""
                                 wet2 = ""
                                 wet3 = ""
                                 wet4 = ""
-                                nextTestNumber = (nextTestNumber.toIntOrNull()?.plus(1))?.toString() ?: nextTestNumber
+                                location = ""
+                                offSet = ""
+                                testNumber = next.toString()
                                 // Optionally refocus to first wet density for rapid entry
                                 wet1Focus.requestFocus()
                             }
                         },
-                        enabled = nextTestNumber.isNotBlank() && testDate.isNotBlank()
+                        enabled = testNumber.isNotBlank() && testDate.isNotBlank()
                     ) {
                         Text("Save")
                     }
