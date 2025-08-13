@@ -65,9 +65,9 @@ fun SlidingPanels(
     bottomContent: @Composable ColumnScope.() -> Unit
 ) {
     val sanitizedSnaps = remember(snapFractions) {
-        snapFractions.map { it.coerceIn(0.1f, 0.95f) }.distinct().sorted()
+        snapFractions.map { it.coerceIn(0f, 0.95f) }.distinct().sorted()
     }
-    val initial = sanitizedSnaps.minByOrNull { abs(it - initialFraction.coerceIn(0.1f, 0.95f)) } ?: 0.4f
+    val initial = sanitizedSnaps.minByOrNull { abs(it - initialFraction.coerceIn(0f, 0.95f)) } ?: 0.4f
 
     // Save and animate the bottom panel height fraction
     val fractionState = rememberSaveable(sanitizedSnaps, saver = fractionSaver()) { mutableStateOf(initial) }
@@ -77,6 +77,23 @@ fun SlidingPanels(
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val maxH = with(LocalDensity.current) { constraints.maxHeight.toFloat() }
+        val collapsedMinFraction = if (maxH > 0f) {
+            (with(LocalDensity.current) { 48.dp.toPx() } / maxH).coerceIn(0f, 0.95f)
+        } else 0f
+        val allSnaps = (sanitizedSnaps + collapsedMinFraction).distinct().sorted()
+        val minBound = collapsedMinFraction
+        val maxBound = allSnaps.last()
+        val availableSnaps = allSnaps.filter { it >= minBound && it <= maxBound }
+
+        LaunchedEffect(minBound, maxBound) {
+            val current = fractionState.value
+            val clamped = current.coerceIn(minBound, maxBound)
+            if (clamped != current) {
+                fractionState.value = clamped
+                animFraction.snapTo(clamped)
+            }
+        }
+
         val bottomHeightPx = animFraction.value * maxH
         val topHeightPx = (maxH - bottomHeightPx).coerceAtLeast(0f)
 
@@ -136,7 +153,7 @@ fun SlidingPanels(
                             // Positive dy => dragging down => reduce bottom height (collapse). Negative => expand.
                             val deltaFraction = dyPx / maxH
                             val newFraction = (fractionState.value - deltaFraction)
-                                .coerceIn(sanitizedSnaps.first(), sanitizedSnaps.last())
+                                .coerceIn(minBound, maxBound)
                             // Snap rendering to the drag position so the panel stays under the finger
                             fractionState.value = newFraction
                             scope.launch { animFraction.snapTo(newFraction) }
@@ -144,8 +161,8 @@ fun SlidingPanels(
                         onDragEnd = { velocityY ->
                             // Predictive snap based on current fraction and velocity
                             val current = fractionState.value
-                            val predicted = (current - (velocityY / maxH) * 0.25f).coerceIn(sanitizedSnaps.first(), sanitizedSnaps.last())
-                            val target = sanitizedSnaps.minByOrNull { abs(it - predicted) } ?: current
+                            val predicted = (current - (velocityY / maxH) * 0.25f).coerceIn(minBound, maxBound)
+                            val target = availableSnaps.minByOrNull { abs(it - predicted) } ?: current
                             if (target != current) {
                                 scope.launch {
                                     animFraction.animateTo(target, animationSpec = TweenSpec(220))
