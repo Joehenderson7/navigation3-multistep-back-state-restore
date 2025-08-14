@@ -21,7 +21,8 @@ class StandardRepository(
         serialNumber: String,
         date: Long,
         densityCount: Int,
-        moistureCount: Int
+        moistureCount: Int,
+        calibrationId: Long? = null
     ) {
         val standard = StandardEntity(
             serialNumber = serialNumber,
@@ -29,7 +30,8 @@ class StandardRepository(
             densityCount = densityCount,
             moistureCount = moistureCount,
             timestamp = System.currentTimeMillis(),
-            gaugeSN = "3717"
+            gaugeSN = "3717",
+            calibrationId = calibrationId
         )
         standardDao.insertStandard(standard)
     }

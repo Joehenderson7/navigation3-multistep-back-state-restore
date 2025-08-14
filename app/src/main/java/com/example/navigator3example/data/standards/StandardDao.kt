@@ -3,6 +3,7 @@ package com.example.navigator3example.data.standards
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -37,4 +38,17 @@ interface StandardDao {
     
     @Query("DELETE FROM standards")
     suspend fun deleteAllStandards()
+
+    // Relations
+    @Transaction
+    @Query("SELECT * FROM nukeCalibrations WHERE id = :calibrationId LIMIT 1")
+    suspend fun getCalibrationWithStandards(calibrationId: Long): CalibrationWithStandards?
+
+    @Transaction
+    @Query("SELECT * FROM nukeCalibrations WHERE serialNumber = :serial ORDER BY date DESC, timestamp DESC")
+    suspend fun getCalibrationsWithStandardsBySerial(serial: String): List<CalibrationWithStandards>
+
+    @Transaction
+    @Query("SELECT * FROM standards WHERE id = :standardId LIMIT 1")
+    suspend fun getStandardWithCalibration(standardId: Long): StandardWithCalibration?
 }

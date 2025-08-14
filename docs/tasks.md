@@ -1,9 +1,9 @@
 1. [x] Align Kotlin Serialization plugin with Kotlin version: update kotlin("plugin.serialization") to 2.0.21 and keep versions centralized via version catalog.
 2. [x] Migrate Room from kapt to KSP for faster builds: apply ksp plugin and replace kapt("androidx.room:room-compiler") with ksp("androidx.room:room-compiler").
 3. [x] Move hardcoded dependency coordinates (serialization, datetime, datastore, Room, Mockito, coroutines-test) into gradle/libs.versions.toml for consistency.
-4. [ ] Clean repo structure: remove or extract the nested duplicate project directory (navigation3-multistep-back-state-restore/) to avoid double Gradle projects and confusion.
-5. [ ] Data model cleanup: remove the extra @Entity NukeGuage from StandardEntity.kt (misspelling and conflicting model). Use data.nuke.NukeGaugeEntity instead.
-6. [ ] If a relation between gauges and standards is needed, model it via Room relations (@Relation with foreign keys) rather than embedding List<StandardEntity>; add a junction table if needed.
+4. [x] Clean repo structure: remove or extract the nested duplicate project directory (navigation3-multistep-back-state-restore/) to avoid double Gradle projects and confusion.
+5. [x] Data model cleanup: remove the extra @Entity NukeGuage from StandardEntity.kt (misspelling and conflicting model). Use data.nuke.NukeGaugeEntity instead.
+6. [x] If a relation between gauges and standards is needed, model it via Room relations (@Relation with foreign keys) rather than embedding List<StandardEntity>; add a junction table if needed. Implemented one-to-many via StandardEntity.calibrationId FK to NukeGaugeCalibration; added relation POJOs and DAO queries; added migration v3 in StandardDatabase.
 7. [ ] Add Room TypeConverters only when storing complex value objects is unavoidable; add unit tests for converters.
 8. [ ] Refactor StandardRepository.insertStandard to avoid hardcoded gaugeSN = "3717"; pass it as a parameter or derive from PreferencesManager; rename fields for clarity (serialNumber vs gaugeSN).
 9. [ ] Add repository-layer validation guards: non-empty serial number, positive density/moisture counts, sensible ranges; throw domain exceptions and cover with tests.
