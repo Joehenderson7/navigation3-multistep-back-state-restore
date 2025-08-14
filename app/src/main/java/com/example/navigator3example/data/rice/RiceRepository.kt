@@ -1,9 +1,17 @@
 package com.example.navigator3example.data.rice
 
 import kotlinx.coroutines.flow.Flow
-import java.util.Calendar
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.plus
 
-class RiceRepository(private val dao: RiceDao) {
+class RiceRepository(
+    private val dao: RiceDao,
+    private val timeZone: TimeZone = TimeZone.currentSystemDefault()
+) {
 
     // Rices
     fun getAllRices(): Flow<List<RiceEntity>> = dao.getAllRices()
@@ -59,16 +67,10 @@ class RiceRepository(private val dao: RiceDao) {
     suspend fun deleteAllCalibrations() = dao.deleteAllCalibrations()
 
     private fun startEndOfDay(date: Long): Pair<Long, Long> {
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = date
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val start = calendar.timeInMillis
-        calendar.add(Calendar.DAY_OF_MONTH, 1)
-        val end = calendar.timeInMillis
+        val instant = Instant.fromEpochMilliseconds(date)
+        val localDate = instant.toLocalDateTime(timeZone).date
+        val start = localDate.atStartOfDayIn(timeZone).toEpochMilliseconds()
+        val end = (localDate + DatePeriod(days = 1)).atStartOfDayIn(timeZone).toEpochMilliseconds()
         return start to end
     }
 }

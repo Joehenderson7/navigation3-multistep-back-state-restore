@@ -222,3 +222,47 @@ app/src/main/java/com/example/navigator3example/
 4. Add more comprehensive test coverage
 5. Consider migrating to stable Navigation when available
 6. Add accessibility support and testing
+
+
+### Input and Data Validation
+- Validate at the point of input. All user-entered data (text fields, pickers, sliders) must be validated immediately as the user types/selects.
+- Prevent invalid input upfront:
+  - Prefer constrained UI (dropdowns, sliders, date/time pickers) over free text where possible.
+  - For text fields, filter/normalize input in onValueChange (e.g., digits-only, one decimal separator, trim spaces).
+  - Set appropriate KeyboardOptions (number, decimal, email) to minimize invalid input.
+- Provide instant feedback:
+  - Use Material 3 isError and supportingText to show validation messages inline.
+  - Disable commit actions (Save/Next) until required fields are valid.
+- Preserve validation state with rememberSaveable so errors/values survive configuration changes.
+- Always re-validate before persisting; UI validation is necessary but not sufficient. Repository/DAO layers should guard against invalid ranges and nulls.
+
+Example (Compose, decimal number input):
+
+```kotlin
+var amount by rememberSaveable { mutableStateOf("") }
+val decimalPattern = remember { Regex("^\\d*(?:\\.\\d{0,2})?") } // up to 2 decimals
+val filtered = remember(amount) { decimalPattern.find(amount)?.value ?: "" }
+val isError = filtered.isBlank() || filtered.toDoubleOrNull() == null
+
+OutlinedTextField(
+    value = filtered,
+    onValueChange = { new ->
+        // Accept only valid prefix matches; ignore invalid characters
+        decimalPattern.find(new)?.value?.let { amount = it }
+    },
+    label = { Text("Amount") },
+    singleLine = true,
+    isError = isError,
+    keyboardOptions = KeyboardOptions(
+        keyboardType = KeyboardType.Decimal,
+        imeAction = ImeAction.Done
+    ),
+    supportingText = { if (isError) Text("Enter a valid number (e.g., 12.34)") }
+)
+// Example: disable save until valid
+Button(onClick = { /* save */ }, enabled = !isError) { Text("Save") }
+```
+
+Notes:
+- Apply the same principle across all screens (Standards, Densities, Rice, etc.).
+- Validate required fields (non-empty, correct formats, ranges) at input time and before navigation/submit.

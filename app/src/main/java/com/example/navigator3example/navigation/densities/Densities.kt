@@ -114,6 +114,12 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
     val wet3Focus = remember { FocusRequester() }
     val wet4Focus = remember { FocusRequester() }
 
+    // Input validation patterns
+    val intPattern = remember { Regex("^\\d*") } // digits only
+    val decimal2Pattern = remember { Regex("^-?\\d*(?:\\.\\d{0,2})?") } // up to 2 decimals
+    val decimalUnsigned2Pattern = remember { Regex("^\\d*(?:\\.\\d{0,2})?") } // up to 2 decimals, no sign (wet densities)
+    val decimal3Pattern = remember { Regex("^-?\\d*(?:\\.\\d{0,3})?") } // up to 3 decimals (correction factor)
+
     // Initialize local correctionFactor from stored preference once
     LaunchedEffect(storedCorrectionFactor) {
         if (correctionFactor.isEmpty() && storedCorrectionFactor.isNotEmpty()) {
@@ -150,6 +156,19 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
         if (correctedAverage != null && ricePcf != null && ricePcf > 0.0) correctedAverage / ricePcf * 100.0 else null
     }
 
+    // Validation derived states
+    val testNumberError by remember { derivedStateOf { testNumber.isBlank() || testNumber.toIntOrNull() == null } }
+    val testDateError by remember { derivedStateOf { testDate.isBlank() } }
+    val correctionError by remember { derivedStateOf {
+        if (correctionFactor.isBlank()) false
+        else correctionFactor.toDoubleOrNull() == null && !(correctionFactor.endsWith(".") || correctionFactor == "-")
+    } }
+    val wet1Error by remember { derivedStateOf { wet1.isNotBlank() && !wet1.endsWith('.') && wet1.toDoubleOrNull() == null } }
+    val wet2Error by remember { derivedStateOf { wet2.isNotBlank() && !wet2.endsWith('.') && wet2.toDoubleOrNull() == null } }
+    val wet3Error by remember { derivedStateOf { wet3.isNotBlank() && !wet3.endsWith('.') && wet3.toDoubleOrNull() == null } }
+    val wet4Error by remember { derivedStateOf { wet4.isNotBlank() && !wet4.endsWith('.') && wet4.toDoubleOrNull() == null } }
+    val formValid by remember { derivedStateOf { !testNumberError && !testDateError && !correctionError } }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -172,9 +191,15 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                     // Test Number
                     OutlinedTextField(
                         value = testNumber,
-                        onValueChange = { testNumber = it },
+                        onValueChange = { new ->
+                            intPattern.find(new)?.value?.let { testNumber = it }
+                        },
                         label = { Text("Test Number") },
                         singleLine = true,
+                        isError = testNumberError,
+                        supportingText = {
+                            if (testNumberError) Text("Required. Use digits only.")
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { locationFocus.requestFocus() }),
                         modifier = Modifier.weight(1f)
@@ -258,16 +283,26 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                     OutlinedTextField(
                         value = correctionFactor,
                         onValueChange = { newValue ->
-                            correctionFactor = newValue
-                            // Persist the last used correction factor
-                            scope.launch { prefs.setCorrectionFactor(newValue) }
+                            decimal3Pattern.find(newValue)?.value?.let { filtered ->
+                                if (filtered != correctionFactor) {
+                                    correctionFactor = filtered
+                                    // Persist the last used correction factor (only when valid number)
+                                    filtered.toDoubleOrNull()?.let {
+                                        scope.launch { prefs.setCorrectionFactor(filtered) }
+                                    }
+                                }
+                            }
                         },
                         label = { Text("Correction Factor") },
                         singleLine = true,
+                        isError = correctionError,
+                        supportingText = {
+                            if (correctionError) Text("Enter a valid number (e.g., 0.125)")
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { wet1Focus.requestFocus() }),
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(.5f)
                             .focusRequester(correctionFocus)
                     )
                 }
@@ -289,9 +324,13 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = wet1,
-                        onValueChange = { wet1 = it },
+                        onValueChange = { new ->
+                            decimalUnsigned2Pattern.find(new)?.value?.let { wet1 = it }
+                        },
                         label = { Text("Wet Density 1") },
                         singleLine = true,
+                        isError = wet1Error,
+                        supportingText = { if (wet1Error) Text("Enter a valid number") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { wet2Focus.requestFocus() }),
                         modifier = Modifier
@@ -300,9 +339,13 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                     )
                     OutlinedTextField(
                         value = wet2,
-                        onValueChange = { wet2 = it },
+                        onValueChange = { new ->
+                            decimalUnsigned2Pattern.find(new)?.value?.let { wet2 = it }
+                        },
                         label = { Text("Wet Density 2") },
                         singleLine = true,
+                        isError = wet2Error,
+                        supportingText = { if (wet2Error) Text("Enter a valid number") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { wet3Focus.requestFocus() }),
                         modifier = Modifier
@@ -313,9 +356,13 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = wet3,
-                        onValueChange = { wet3 = it },
+                        onValueChange = { new ->
+                            decimalUnsigned2Pattern.find(new)?.value?.let { wet3 = it }
+                        },
                         label = { Text("Wet Density 3") },
                         singleLine = true,
+                        isError = wet3Error,
+                        supportingText = { if (wet3Error) Text("Enter a valid number") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
                         keyboardActions = KeyboardActions(onNext = { wet4Focus.requestFocus() }),
                         modifier = Modifier
@@ -324,9 +371,13 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                     )
                     OutlinedTextField(
                         value = wet4,
-                        onValueChange = { wet4 = it },
+                        onValueChange = { new ->
+                            decimalUnsigned2Pattern.find(new)?.value?.let { wet4 = it }
+                        },
                         label = { Text("Wet Density 4") },
                         singleLine = true,
+                        isError = wet4Error,
+                        supportingText = { if (wet4Error) Text("Enter a valid number") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                         modifier = Modifier
@@ -370,16 +421,11 @@ private fun NuclearDensityInputScreen(onViewAll: () -> Unit) {
                                 wet1Focus.requestFocus()
                             }
                         },
-                        enabled = testNumber.isNotBlank() && testDate.isNotBlank()
+                        enabled = formValid
                     ) {
                         Text("Save")
                     }
                 }
-
-                Text(
-                    text = "Enter four wet densities, select Rice, and a Correction Factor to see calculations above.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
             }
         }
     }

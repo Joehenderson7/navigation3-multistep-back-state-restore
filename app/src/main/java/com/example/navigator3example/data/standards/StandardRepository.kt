@@ -1,9 +1,17 @@
 package com.example.navigator3example.data.standards
 
 import kotlinx.coroutines.flow.Flow
-import java.util.Calendar
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.plus
 
-class StandardRepository(private val standardDao: StandardDao) {
+class StandardRepository(
+    private val standardDao: StandardDao,
+    private val timeZone: TimeZone = TimeZone.currentSystemDefault()
+) {
     
     fun getAllStandards(): Flow<List<StandardEntity>> {
         return standardDao.getAllStandards()
@@ -43,18 +51,10 @@ class StandardRepository(private val standardDao: StandardDao) {
     }
     
     suspend fun getStandardsByDate(date: Long): List<StandardEntity> {
-        // Get start and end of the day for the given date
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = date
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        val startOfDay = calendar.timeInMillis
-        
-        calendar.add(Calendar.DAY_OF_MONTH, 1)
-        val endOfDay = calendar.timeInMillis
-        
+        val instant = Instant.fromEpochMilliseconds(date)
+        val localDate = instant.toLocalDateTime(timeZone).date
+        val startOfDay = localDate.atStartOfDayIn(timeZone).toEpochMilliseconds()
+        val endOfDay = (localDate + DatePeriod(days = 1)).atStartOfDayIn(timeZone).toEpochMilliseconds()
         return standardDao.getStandardsByDate(startOfDay, endOfDay)
     }
     

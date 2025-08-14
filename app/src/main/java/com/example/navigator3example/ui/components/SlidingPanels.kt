@@ -80,9 +80,13 @@ fun SlidingPanels(
         val collapsedMinFraction = if (maxH > 0f) {
             (with(LocalDensity.current) { 48.dp.toPx() } / maxH).coerceIn(0f, 0.95f)
         } else 0f
-        val allSnaps = (sanitizedSnaps + collapsedMinFraction).distinct().sorted()
-        val minBound = collapsedMinFraction
-        val maxBound = allSnaps.last()
+        val topBarHeightPx = with(LocalDensity.current) { 48.dp.toPx() }
+        val expandedMaxFraction = if (maxH > 0f) {
+            ((maxH - topBarHeightPx) / maxH).coerceIn(0f, 1f)
+        } else 1f
+        val allSnaps = (sanitizedSnaps + collapsedMinFraction + expandedMaxFraction).distinct().sorted()
+        val minBound = minOf(collapsedMinFraction, expandedMaxFraction)
+        val maxBound = maxOf(collapsedMinFraction, expandedMaxFraction)
         val availableSnaps = allSnaps.filter { it >= minBound && it <= maxBound }
 
         LaunchedEffect(minBound, maxBound) {
